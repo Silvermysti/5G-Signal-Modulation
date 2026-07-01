@@ -1,0 +1,18 @@
+# --- Never commit the dataset (huge + non-commercial license) ---
+Data/
+prepared/
+*.npy
+*.h5
+
+# --- Never commit the virtual environment (huge, machine-specific) ---
+.venv/
+
+# --- The source paper (large binary; freely available on arXiv) ---
+*.pdf
+
+# --- Python junk ---
+__pycache__/
+*.pyc
+
+# --- Editor/OS noise ---
+.DS_Store
