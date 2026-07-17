@@ -1,8 +1,10 @@
 # --- Never commit the dataset (huge + non-commercial license) ---
 Data/
 prepared/
+models/
 *.npy
 *.h5
+*.keras
 
 # --- Never commit the virtual environment (huge, machine-specific) ---
 .venv/
