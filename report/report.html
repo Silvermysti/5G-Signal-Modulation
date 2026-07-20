@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*, *::before, *::after { box-sizing: border-box; }</style>
+<title>3-Modulation CNN — Project Report</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --accent: #2a78d6;
+    --accent-ink: #1c5cab;
+    --series-2: #008300;
+    --wash: rgba(42, 120, 214, 0.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5;
+      --accent-ink: #86b6ef;
+      --series-2: #00a300;
+      --wash: rgba(57, 135, 229, 0.10);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --accent-ink: #86b6ef;
+    --series-2: #00a300;
+    --wash: rgba(57, 135, 229, 0.10);
+  }
+
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 3.5rem 1.25rem 5rem;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: 3.25rem; }
+  section { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+    line-height: 1.15;
+    margin: 0.35rem 0 0;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  h2 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  h3 { font-size: 1rem; margin: 0.4rem 0 0; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--ink-2); font-size: 1.05rem; max-width: 60ch; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem; color: var(--muted); margin-top: 0.8rem;
+  }
+  a { color: var(--accent-ink); text-underline-offset: 3px; }
+  a:focus-visible, [data-tip]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.75rem; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.9rem 1rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem;
+  }
+  .tile .k {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  }
+  .tile .v { font-size: 1.65rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+  .tile .s { font-size: 0.78rem; color: var(--ink-2); }
+
+  /* figures */
+  figure {
+    margin: 0.4rem 0 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.1rem 1.1rem 0.9rem; overflow-x: auto;
+  }
+  figcaption { font-size: 0.8rem; color: var(--muted); margin-top: 0.55rem; max-width: 60ch; }
+  .fig-title { font-size: 0.85rem; font-weight: 600; margin: 0 0 0.15rem; }
+  .fig-sub { font-size: 0.78rem; color: var(--ink-2); margin: 0 0 0.7rem; }
+  svg { display: block; max-width: 100%; height: auto; }
+  svg text { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10.5px; fill: var(--muted); }
+  svg .val { fill: var(--ink-2); font-size: 10px; }
+  .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; margin: 0 0 0.6rem; font-size: 0.78rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .chip { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  /* pipeline */
+  ol.steps { list-style: none; margin: 0.3rem 0 0; padding: 0; display: flex; flex-direction: column; }
+  ol.steps li {
+    display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.9rem;
+    padding: 0.8rem 0; border-top: 1px solid var(--grid);
+  }
+  ol.steps li:last-child { border-bottom: 1px solid var(--grid); }
+  ol.steps .n {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--accent-ink); font-size: 0.8rem; padding-top: 0.15rem;
+  }
+  ol.steps .t { font-weight: 600; }
+  ol.steps .d { font-size: 0.88rem; color: var(--ink-2); max-width: 58ch; }
+  ol.steps code, td code, p code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85em; background: var(--wash); border-radius: 3px; padding: 0.05em 0.35em;
+  }
+
+  /* tables */
+  .tbl-wrap { overflow-x: auto; margin-top: 0.4rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 0.45rem 0.9rem 0.45rem 0; border-bottom: 1px solid var(--grid); }
+  th {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td:last-child, th:last-child { padding-right: 0; }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--wash);
+    border-radius: 0 6px 6px 0; padding: 0.85rem 1.1rem; max-width: 60ch;
+  }
+  .callout p { font-size: 0.95rem; }
+
+  ul.tight { margin: 0.2rem 0 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.45rem; }
+  ul.tight li { max-width: 60ch; }
+  ul.tight li::marker { color: var(--accent-ink); }
+
+  footer { border-top: 1px solid var(--grid); padding-top: 1.2rem; font-size: 0.78rem; color: var(--muted); }
+  footer p { max-width: 100%; }
+
+  /* tooltip */
+  #tip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--ink); color: var(--plane);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem; line-height: 1.45; padding: 0.4rem 0.6rem; border-radius: 5px;
+    max-width: 16rem; white-space: pre-line;
+  }
+  [data-tip] { cursor: default; }
+  @media (prefers-reduced-motion: no-preference) {
+    .hover-target { transition: opacity 120ms ease; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Project report · RadioML 2018.01A</p>
+    <h1>Teaching a CNN to recognize radio signals — a scaled-down replication</h1>
+    <p class="lede">We rebuilt the VGG-style convolutional network from O'Shea, Roy &amp; Clancy's <em>Over&nbsp;the&nbsp;Air Deep Learning Based Radio Signal Classification</em>, shrunk from 24 modulations to 3 so it trains on a CPU laptop in minutes — then dug into <em>why</em> it scores what it scores.</p>
+    <div class="meta">
+      <span>2026-07-20</span>
+      <span>Silvermysti/5G-Signal-Modulation</span>
+      <span>TensorFlow 2.21 · Keras 3.14 · CPU only</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="tiles">
+      <div class="tile">
+        <span class="k">Test accuracy</span>
+        <span class="v">81.1%</span>
+        <span class="s">3,000 held-out examples</span>
+      </div>
+      <div class="tile">
+        <span class="k">Cleaner 60% of signals</span>
+        <span class="v">99.4%</span>
+        <span class="s">matches the paper's high-SNR result</span>
+      </div>
+      <div class="tile">
+        <span class="k">Noisiest 30%</span>
+        <span class="v">≈42%</span>
+        <span class="s">random guessing = 33%</span>
+      </div>
+      <div class="tile">
+        <span class="k">Model size</span>
+        <span class="v">158,915</span>
+        <span class="s">parameters · ~621 KB</span>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>The headline finding:</strong> the flat "81%" hides two very different regimes. On signals clean enough to carry information, the model is essentially perfect (~99%). On the noisiest third, the modulation is physically destroyed by noise before it reaches the receiver — no classifier can recover it. This isn't a model weakness; it's an information limit, and it's exactly the S-curve the paper reports.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">01 · The task</p>
+    <h2>What the model has to do</h2>
+    <p>Radio transmitters encode data by shaping a carrier wave — a scheme called a <strong>modulation</strong>. Given a raw 1024-sample I/Q snippet (two channels describing the wave's amplitude and phase over time), the model must name the scheme that produced it. The full DeepSig dataset covers 24 modulations across 2.55&nbsp;million examples (~19.5&nbsp;GB); we scoped down to three that are physically distinct, as an encouraging first build:</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>Class</th><th>Full name</th><th>How it carries data</th></tr>
+      <tr><td><strong>OOK</strong></td><td>On-Off Keying</td><td>switches the carrier on and off — the simplest digital scheme</td></tr>
+      <tr><td><strong>QPSK</strong></td><td>Quadrature Phase-Shift Keying</td><td>jumps between four phase angles</td></tr>
+      <tr><td><strong>FM</strong></td><td>Frequency Modulation</td><td>bends the carrier's frequency continuously (analog, like FM radio)</td></tr>
+    </table></div>
+    <p>Following the paper's core thesis, the network sees <strong>raw I/Q samples only</strong> — no Fourier transform, no hand-crafted features. The network learns its own features from the waveform.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">02 · The pipeline</p>
+    <h2>Five small scripts, one per step</h2>
+    <ol class="steps">
+      <li><span class="n">1</span><div><span class="t">Environment</span><br><span class="d">Project virtualenv with TensorFlow 2.21 / Keras 3.14. Target machine: 12 CPU cores, 15&nbsp;GB RAM, no GPU.</span></div></li>
+      <li><span class="n">2</span><div><span class="t">Data prep — <code>data_prep.py</code></span><br><span class="d">Memory-maps the 19.5&nbsp;GB signals file (never loads it fully), pulls 5,000 random examples per class, normalizes each snippet to unit variance, and makes a stratified 80/20 split: 12,000 train / 3,000 test.</span></div></li>
+      <li><span class="n">3</span><div><span class="t">Model — <code>model.py</code></span><br><span class="d">The paper's VGG-style 1D CNN, layer-for-layer (Table III), with the final softmax narrowed from 24 outputs to 3.</span></div></li>
+      <li><span class="n">4</span><div><span class="t">Training — <code>train.py</code></span><br><span class="d">Adam optimizer, cross-entropy loss, batch 128, early stopping on validation loss — the paper's stated recipe. ~5 minutes on CPU.</span></div></li>
+      <li><span class="n">5</span><div><span class="t">Evaluation — <code>evaluate.py</code></span><br><span class="d">Held-out accuracy, per-class precision/recall, confusion matrix, and a model-confidence check.</span></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <p class="eyebrow">03 · Architecture</p>
+    <h2>Small filters, stacked deep</h2>
+    <p>The VGG idea: instead of a few wide filters, stack many <strong>size-3 filters</strong> and halve the signal after each with max-pooling. Depth grows the effective field of view — by layer 7 each filter effectively spans a quarter of the original signal — while keeping parameters low.</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>Stage</th><th>Layers</th><th class="num">Output length</th></tr>
+      <tr><td>Input</td><td>1024 time-steps × 2 channels (I/Q)</td><td class="num">1024</td></tr>
+      <tr><td>Blocks 1–7</td><td>each: Conv1D(64, size 3, ReLU) → BatchNorm → MaxPool ÷2</td><td class="num">512 → … → 8</td></tr>
+      <tr><td>Flatten</td><td>8 × 64 → one vector</td><td class="num">512</td></tr>
+      <tr><td>Classifier</td><td>Dense 128 (SELU) → Dense 128 (SELU), AlphaDropout</td><td class="num">128</td></tr>
+      <tr><td>Output</td><td>Dense 3, softmax → probabilities</td><td class="num">3</td></tr>
+    </table></div>
+    <p>158,915 parameters total — comparable to the paper's 257k (the difference is almost entirely the narrower output head).</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">04 · Training</p>
+    <h2>Learned fast, then started memorizing — and got caught</h2>
+    <figure>
+      <p class="fig-title">Accuracy per epoch</p>
+      <p class="fig-sub">12,000 training examples · batch 128 · Adam</p>
+      <div class="legend">
+        <span><span class="chip" style="background: var(--series-2)"></span>Training accuracy</span>
+        <span><span class="chip" style="background: var(--accent)"></span>Validation accuracy</span>
+      </div>
+      <svg viewBox="0 0 640 232" role="img" aria-label="Line chart of training and validation accuracy over 11 epochs. Validation peaks at 81.8 percent at epoch 6, while training accuracy keeps climbing to 95.7 percent, and early stopping halts the run at epoch 11.">
+        <g stroke="var(--grid)" stroke-width="1">
+          <line x1="40" y1="16" x2="620" y2="16"/>
+          <line x1="40" y1="67.4" x2="620" y2="67.4"/>
+          <line x1="40" y1="118.9" x2="620" y2="118.9"/>
+          <line x1="40" y1="170.3" x2="620" y2="170.3"/>
+        </g>
+        <line x1="40" y1="196" x2="620" y2="196" stroke="var(--baseline)" stroke-width="1"/>
+        <text x="34" y="20" text-anchor="end">100%</text>
+        <text x="34" y="71" text-anchor="end">80</text>
+        <text x="34" y="123" text-anchor="end">60</text>
+        <text x="34" y="174" text-anchor="end">40</text>
+        <!-- best-epoch marker -->
+        <line x1="320" y1="16" x2="320" y2="196" stroke="var(--baseline)" stroke-width="1" stroke-dasharray="3 4"/>
+        <text x="326" y="188">best epoch (6)</text>
+        <!-- train -->
+        <polyline fill="none" stroke="var(--series-2)" stroke-width="2" stroke-linejoin="round"
+          points="40,85.0 96,66.0 152,54.2 208,47.4 264,44.1 320,40.0 376,38.7 432,37.0 488,34.1 544,28.2 600,27.0"/>
+        <!-- val -->
+        <polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"
+          points="40,180.5 96,104.7 152,99.0 208,80.1 264,74.0 320,62.8 376,65.5 432,67.9 488,68.8 544,68.2 600,69.6"/>
+        <circle cx="320" cy="62.8" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+        <circle cx="600" cy="27.0" r="4.5" fill="var(--series-2)" stroke="var(--surface)" stroke-width="2"/>
+        <text x="590" y="20" text-anchor="end" class="val">95.7%</text>
+        <text x="320" y="54" text-anchor="middle" class="val" fill="var(--accent-ink)">81.8%</text>
+        <!-- x labels -->
+        <text x="40" y="212" text-anchor="middle">1</text>
+        <text x="152" y="212" text-anchor="middle">3</text>
+        <text x="264" y="212" text-anchor="middle">5</text>
+        <text x="376" y="212" text-anchor="middle">7</text>
+        <text x="488" y="212" text-anchor="middle">9</text>
+        <text x="600" y="212" text-anchor="middle">11</text>
+        <text x="330" y="228" text-anchor="middle">epoch</text>
+        <!-- hover targets -->
+        <g id="lc-hover"></g>
+      </svg>
+      <figcaption>After epoch 6 the curves diverge: training accuracy keeps rising while validation stalls — the signature of overfitting (memorizing examples instead of learning the concept). Early stopping halted the run at epoch 11 and rolled the weights back to epoch 6.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <p class="eyebrow">05 · Results</p>
+    <h2>Balanced across classes, with one dominant confusion</h2>
+    <figure>
+      <p class="fig-title">Confusion matrix — held-out test set</p>
+      <p class="fig-sub">Rows: true modulation · columns: model's guess · row-normalized</p>
+      <svg viewBox="0 0 460 300" role="img" aria-label="Three by three confusion matrix. Diagonal cells are around 81 percent for all classes. The largest confusions are OOK mistaken for FM at 14.1 percent and FM mistaken for OOK at 13.4 percent.">
+        <text x="250" y="14" text-anchor="middle">model's guess</text>
+        <text x="145" y="40" text-anchor="middle">OOK</text>
+        <text x="250" y="40" text-anchor="middle">QPSK</text>
+        <text x="355" y="40" text-anchor="middle">FM</text>
+        <text x="86" y="94" text-anchor="end">OOK</text>
+        <text x="86" y="176" text-anchor="end">QPSK</text>
+        <text x="86" y="258" text-anchor="end">FM</text>
+        <text x="20" y="176" text-anchor="middle" transform="rotate(-90 20 176)">true modulation</text>
+        <!-- row OOK -->
+        <g>
+          <rect x="95" y="50" width="100" height="78" rx="4" fill="#256abf" data-tip="True OOK → guessed OOK&#10;815 of 1,000 (81.5%)"/>
+          <rect x="200" y="50" width="100" height="78" rx="4" fill="#cde2fb" data-tip="True OOK → guessed QPSK&#10;44 of 1,000 (4.4%)"/>
+          <rect x="305" y="50" width="100" height="78" rx="4" fill="#b7d3f6" data-tip="True OOK → guessed FM&#10;141 of 1,000 (14.1%)"/>
+          <text x="145" y="86" text-anchor="middle" fill="#ffffff" font-weight="600">81.5%</text>
+          <text x="145" y="102" text-anchor="middle" fill="#cde2fb">815</text>
+          <text x="250" y="86" text-anchor="middle" fill="#0d366b" font-weight="600">4.4%</text>
+          <text x="250" y="102" text-anchor="middle" fill="#1c5cab">44</text>
+          <text x="355" y="86" text-anchor="middle" fill="#0d366b" font-weight="600">14.1%</text>
+          <text x="355" y="102" text-anchor="middle" fill="#1c5cab">141</text>
+        </g>
+        <!-- row QPSK -->
+        <g>
+          <rect x="95" y="132" width="100" height="78" rx="4" fill="#cde2fb" data-tip="True QPSK → guessed OOK&#10;79 of 1,000 (7.9%)"/>
+          <rect x="200" y="132" width="100" height="78" rx="4" fill="#256abf" data-tip="True QPSK → guessed QPSK&#10;816 of 1,000 (81.6%)"/>
+          <rect x="305" y="132" width="100" height="78" rx="4" fill="#b7d3f6" data-tip="True QPSK → guessed FM&#10;105 of 1,000 (10.5%)"/>
+          <text x="145" y="168" text-anchor="middle" fill="#0d366b" font-weight="600">7.9%</text>
+          <text x="145" y="184" text-anchor="middle" fill="#1c5cab">79</text>
+          <text x="250" y="168" text-anchor="middle" fill="#ffffff" font-weight="600">81.6%</text>
+          <text x="250" y="184" text-anchor="middle" fill="#cde2fb">816</text>
+          <text x="355" y="168" text-anchor="middle" fill="#0d366b" font-weight="600">10.5%</text>
+          <text x="355" y="184" text-anchor="middle" fill="#1c5cab">105</text>
+        </g>
+        <!-- row FM -->
+        <g>
+          <rect x="95" y="214" width="100" height="78" rx="4" fill="#b7d3f6" data-tip="True FM → guessed OOK&#10;134 of 1,000 (13.4%)"/>
+          <rect x="200" y="214" width="100" height="78" rx="4" fill="#cde2fb" data-tip="True FM → guessed QPSK&#10;65 of 1,000 (6.5%)"/>
+          <rect x="305" y="214" width="100" height="78" rx="4" fill="#256abf" data-tip="True FM → guessed FM&#10;801 of 1,000 (80.1%)"/>
+          <text x="145" y="250" text-anchor="middle" fill="#0d366b" font-weight="600">13.4%</text>
+          <text x="145" y="266" text-anchor="middle" fill="#1c5cab">134</text>
+          <text x="250" y="250" text-anchor="middle" fill="#0d366b" font-weight="600">6.5%</text>
+          <text x="250" y="266" text-anchor="middle" fill="#1c5cab">65</text>
+          <text x="355" y="250" text-anchor="middle" fill="#ffffff" font-weight="600">80.1%</text>
+          <text x="355" y="266" text-anchor="middle" fill="#cde2fb">801</text>
+        </g>
+      </svg>
+      <figcaption>The OOK↔FM pair accounts for 275 of 568 total errors — nearly half. This is the pattern noise produces: in the paper's per-modulation curves, FM and OOK are the two schemes that stay detectable longest as SNR falls, so at the noise floor they end up confused with each other.</figcaption>
+    </figure>
+    <div class="tbl-wrap"><table>
+      <tr><th>Class</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th>Read</th></tr>
+      <tr><td>OOK</td><td class="num">0.793</td><td class="num">0.815</td><td class="num">0.804</td><td>balanced</td></tr>
+      <tr><td>QPSK</td><td class="num">0.882</td><td class="num">0.816</td><td class="num">0.848</td><td>cautious — under-claims, so when it says QPSK it's usually right</td></tr>
+      <tr><td>FM</td><td class="num">0.765</td><td class="num">0.801</td><td class="num">0.783</td><td>trigger-happy — claims FM 1,047 times for 1,000 real ones</td></tr>
+    </table></div>
+    <p>The model also knows when it's unsure: average confidence was <strong>0.965 when correct</strong> vs <strong>0.764 when wrong</strong> — the behavior you want from a classifier you might later allow to say "unknown."</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">06 · The noise investigation</p>
+    <h2>Recovering the paper's S-curve without SNR labels</h2>
+    <p>The paper insists accuracy be reported <em>as a curve against signal-to-noise ratio</em> — but our three data files don't store the per-example SNR. So we estimated it blind, from the signal alone, using two independent statistics:</p>
+    <ul class="tight">
+      <li><strong>Spectral flatness</strong> — pure noise spreads energy evenly across all frequencies; a real signal has peaks and structure.</li>
+      <li><strong>Lag-1 autocorrelation</strong> — noise samples are independent; a real signal is smooth, so neighboring samples relate.</li>
+    </ul>
+    <p>Computed in completely different ways, the two proxies agree with a correlation of <strong>−0.996</strong> — strong evidence both measure the same underlying thing: noise level.</p>
+    <figure>
+      <p class="fig-title">Model accuracy by estimated noise level</p>
+      <p class="fig-sub">3,000 test examples in 10 equal buckets, ranked by spectral flatness</p>
+      <svg viewBox="0 0 640 240" role="img" aria-label="Bar chart of accuracy across ten noise buckets, from noisiest to cleanest. The three noisiest buckets sit near 38 to 47 percent, bucket four jumps to 88 percent, and buckets five through ten plateau at 99 to 100 percent. A dashed line marks the 33 percent random-guess floor.">
+        <g stroke="var(--grid)" stroke-width="1">
+          <line x1="40" y1="16" x2="620" y2="16"/>
+          <line x1="40" y1="61" x2="620" y2="61"/>
+          <line x1="40" y1="106" x2="620" y2="106"/>
+          <line x1="40" y1="151" x2="620" y2="151"/>
+        </g>
+        <text x="34" y="20" text-anchor="end">100%</text>
+        <text x="34" y="65" text-anchor="end">75</text>
+        <text x="34" y="110" text-anchor="end">50</text>
+        <text x="34" y="155" text-anchor="end">25</text>
+        <!-- bars: y = 16 + (100-v)*1.8 ; h = 196-y -->
+        <g fill="var(--accent)">
+          <rect x="46"  y="128.1" width="46" height="67.9" rx="4" data-tip="Bucket 1 — noisiest 10%&#10;Accuracy 37.7%"/>
+          <rect x="104" y="120.4" width="46" height="75.6" rx="4" data-tip="Bucket 2&#10;Accuracy 42.0%"/>
+          <rect x="162" y="111.9" width="46" height="84.1" rx="4" data-tip="Bucket 3&#10;Accuracy 46.7%"/>
+          <rect x="220" y="37.1"  width="46" height="158.9" rx="4" data-tip="Bucket 4 — the transition&#10;Accuracy 88.3%"/>
+          <rect x="278" y="16"   width="46" height="180" rx="4" data-tip="Bucket 5&#10;Accuracy 100.0%"/>
+          <rect x="336" y="16.5" width="46" height="179.5" rx="4" data-tip="Bucket 6&#10;Accuracy 99.7%"/>
+          <rect x="394" y="18.3" width="46" height="177.7" rx="4" data-tip="Bucket 7&#10;Accuracy 98.7%"/>
+          <rect x="452" y="17.3" width="46" height="178.7" rx="4" data-tip="Bucket 8&#10;Accuracy 99.3%"/>
+          <rect x="510" y="18.3" width="46" height="177.7" rx="4" data-tip="Bucket 9&#10;Accuracy 98.7%"/>
+          <rect x="568" y="16.5" width="46" height="179.5" rx="4" data-tip="Bucket 10 — cleanest 10%&#10;Accuracy 99.7%"/>
+        </g>
+        <line x1="40" y1="196" x2="620" y2="196" stroke="var(--baseline)" stroke-width="1"/>
+        <!-- random guess line: 33.3% -> y = 16 + 66.7*1.8 = 136.1 -->
+        <line x1="40" y1="136.1" x2="620" y2="136.1" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 4"/>
+        <text x="616" y="132" text-anchor="end" class="val">random guess (33%)</text>
+        <!-- selective labels -->
+        <text x="69"  y="122" text-anchor="middle" class="val">37.7</text>
+        <text x="127" y="114" text-anchor="middle" class="val">42.0</text>
+        <text x="185" y="106" text-anchor="middle" class="val">46.7</text>
+        <text x="243" y="31"  text-anchor="middle" class="val">88.3</text>
+        <text x="446" y="38" text-anchor="middle" class="val" fill="var(--accent-ink)">≈99% plateau</text>
+        <text x="69" y="212" text-anchor="middle">noisiest</text>
+        <text x="591" y="212" text-anchor="middle">cleanest</text>
+        <text x="330" y="212" text-anchor="middle">→ estimated SNR →</text>
+      </svg>
+      <figcaption>The paper's S-curve, reproduced without ever having SNR labels. Sanity check: 0.6 × 99.4% + 0.1 × 88.3% + 0.3 × 42.1% = 81.1% — exactly the overall score.</figcaption>
+    </figure>
+    <div class="callout">
+      <p><strong>Why not feed the SNR estimate back into the classifier?</strong> Because there's no headroom: wherever the signal is detectable at all, the model is already at ~99%. The remaining errors live where modulation information is physically absent — destroyed by noise before capture. The estimate's real value is as a <em>gate</em>: answer confidently on the clean ~70%, and honestly say "unknown" on the rest.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">07 · Against the paper</p>
+    <h2>What we replicated, and what we scoped out</h2>
+    <div class="tbl-wrap"><table>
+      <tr><th>Paper element</th><th>Status</th><th>Note</th></tr>
+      <tr><td>Raw I/Q input, no expert features</td><td>replicated</td><td>the paper's core thesis</td></tr>
+      <tr><td>VGG CNN layout (Table III)</td><td>replicated</td><td>layer-for-layer; output head 3-wide instead of 24</td></tr>
+      <tr><td>Training recipe (Adam, cross-entropy, early stop)</td><td>replicated</td><td>their stated stopping rule, verbatim</td></tr>
+      <tr><td>Accuracy-as-a-curve vs SNR</td><td>approximated</td><td>via blind noise proxies; ranking, not calibrated dB</td></tr>
+      <tr><td>High-SNR accuracy ~98.3% (VGG)</td><td>matched</td><td>our clean-bucket accuracy: 99.4% on an easier 3-class task</td></tr>
+      <tr><td>XGBoost baseline</td><td>studied only</td><td>covered conceptually, not built</td></tr>
+      <tr><td>ResNet (their best, 99.8%)</td><td>not yet</td><td>the one architecture idea still unbuilt: skip connections</td></tr>
+      <tr><td>Over-the-air testing, transfer learning</td><td>out of scope</td><td>requires software-defined radio hardware</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <p class="eyebrow">08 · Next</p>
+    <h2>Open threads</h2>
+    <ul class="tight">
+      <li><strong>Build the ResNet</strong> — skip connections are the paper's best model and the one concept not yet built; same data, same training script, new model function.</li>
+      <li><strong>A "refuse to answer" gate</strong> — use the noise proxy to answer only when the signal is classifiable: ~99% accuracy on everything answered.</li>
+      <li><strong>The harder trio</strong> — BPSK / QPSK / 8PSK differ only in phase-angle count; a genuine test of whether the network learns phase structure.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Dataset: DeepSig RadioML 2018.01A (CC BY-NC-SA 4.0 — non-commercial, attribution required). Reference: T. O'Shea, T. Roy, T. C. Clancy, "Over the Air Deep Learning Based Radio Signal Classification," IEEE J-STSP, 2018. Code: <a href="https://github.com/Silvermysti/5G-Signal-Modulation">github.com/Silvermysti/5G-Signal-Modulation</a> (private).</p>
+  </footer>
+
+</div>
+
+<div id="tip" role="status"></div>
+
+<script>
+  // Shared tooltip for all [data-tip] marks
+  (function () {
+    var tip = document.getElementById('tip');
+    function show(e) {
+      var t = e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var x = e.clientX + 14, y = e.clientY + 14;
+      var r = tip.getBoundingClientRect();
+      if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - 10;
+      if (y + r.height > window.innerHeight - 8) y = e.clientY - r.height - 10;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    }
+    document.addEventListener('mousemove', show);
+    document.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  })();
+
+  // Hover targets for the training-curve chart (per-epoch readout)
+  (function () {
+    var svgGroup = document.getElementById('lc-hover');
+    var train = [73.2, 80.6, 85.2, 87.8, 89.1, 90.7, 91.2, 91.8, 93.0, 95.3, 95.7];
+    var val   = [36.0, 65.5, 67.7, 75.1, 77.5, 81.8, 80.8, 79.8, 79.5, 79.7, 79.2];
+    for (var i = 0; i < 11; i++) {
+      var r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('x', 40 + i * 56 - 28);
+      r.setAttribute('y', 16);
+      r.setAttribute('width', 56);
+      r.setAttribute('height', 180);
+      r.setAttribute('fill', 'transparent');
+      r.setAttribute('data-tip',
+        'Epoch ' + (i + 1) + '\ntrain ' + train[i].toFixed(1) + '%\nval   ' + val[i].toFixed(1) + '%');
+      svgGroup.appendChild(r);
+    }
+  })();
+</script>
+</body>
+</html>
