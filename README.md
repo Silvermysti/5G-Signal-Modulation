@@ -56,13 +56,18 @@ stops improving — the paper's stated recipe.
 
 ```
 scripts/
-  data_prep.py    memory-maps the 19.5 GB dataset, pulls 5,000 examples per
-                  class, normalizes to unit variance, 80/20 stratified split
-  model.py        the CNN (run directly to print the architecture)
-  train.py        training with early stopping + best-model checkpointing
-  evaluate.py     accuracy, precision/recall, confusion matrix, confidence check
-report/           full write-up (HTML with interactive charts + markdown summary)
-results/          generated figures
+  data_prep.py     memory-maps the 19.5 GB dataset, pulls 5,000 examples per
+                   class, normalizes to unit variance, 80/20 stratified split
+  model.py         the VGG CNN (run directly to print the architecture)
+  resnet_model.py  the ResNet variant with skip connections
+  train.py         training with early stopping + best-model checkpointing
+  evaluate.py      accuracy, precision/recall, confusion matrix, confidence check
+prepared/          the sampled + split arrays produced by data_prep.py
+                   (X_train/X_test/y_train/y_test.npy, classes.txt)
+models/            trained weights — vgg_3mod.keras, resnet_3mod.keras
+report/            full write-up (HTML with interactive charts + markdown summary)
+results/           generated figures
+Data/              the raw RadioML dataset (gitignored — see Setup)
 ```
 
 ## Setup
@@ -95,12 +100,19 @@ the rows it needs.
 .venv/bin/python scripts/evaluate.py    # metrics + confusion matrix
 ```
 
+## Architectures built
+
+- **VGG CNN** — 81.1% test accuracy, 158,915 parameters
+- **ResNet** — 82.1% test accuracy, 165,507 parameters (skip connections add 1% via easier training, but both hit the same noise ceiling)
+
+The paper achieves 98.3% (VGG) and 99.8% (ResNet) at high SNR on 24 classes. We match
+the curve shape (99.4% at high SNR on this 3-class task) but both models degrade equally
+at low SNR — the bottleneck is data quality, not architecture.
+
 ## Not built (yet)
 
-The paper covers three methods; this repo implements one of them.
+The paper covers three methods; this repo implements the two deep-learning ones:
 
-- **ResNet** — the paper's best model (99.8% vs VGG's 98.3% at high SNR). Adds
-  skip connections. Notably, at low SNR the two are identical.
 - **XGBoost baseline** on higher-order moments — the classical-features comparison.
 - **Over-the-air capture and transfer learning** — requires software-defined radio
   hardware.
