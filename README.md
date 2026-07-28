@@ -92,7 +92,10 @@ scripts/
 prepared/          the sampled + split arrays produced by data_prep.py
                    (X_train/X_test/y_train/y_test.npy, snr_*.npy, classes.txt)
 models/            trained weights — vgg.keras, resnet.keras
-report/            full write-up (HTML with interactive charts + markdown summary)
+report/            write-ups, one folder per phase (interactive HTML + markdown)
+  README.md          index linking both phase reports
+  warmup-3class/     Phase 1 — the 3-class warm-up (81.1%)
+  scaleup-10class/   Phase 2 — 10 classes + refuse-to-answer gate
 results/           generated figures
 Data/              the raw RadioML dataset (gitignored — see Setup)
 ```

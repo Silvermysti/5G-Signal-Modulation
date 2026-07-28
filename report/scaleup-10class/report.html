@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*, *::before, *::after { box-sizing: border-box; }</style>
+<title>10-Modulation CNN + Gate — Project Report</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --accent: #2a78d6;
+    --accent-ink: #1c5cab;
+    --series-2: #008300;
+    --wash: rgba(42, 120, 214, 0.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5;
+      --accent-ink: #86b6ef;
+      --series-2: #00a300;
+      --wash: rgba(57, 135, 229, 0.10);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --accent-ink: #86b6ef;
+    --series-2: #00a300;
+    --wash: rgba(57, 135, 229, 0.10);
+  }
+
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 3.5rem 1.25rem 5rem;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: 3.25rem; }
+  section { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+    line-height: 1.15;
+    margin: 0.35rem 0 0;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  h2 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  h3 { font-size: 1rem; margin: 0.4rem 0 0; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--ink-2); font-size: 1.05rem; max-width: 60ch; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem; color: var(--muted); margin-top: 0.8rem;
+  }
+  a { color: var(--accent-ink); text-underline-offset: 3px; }
+  a:focus-visible, [data-tip]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.75rem; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.9rem 1rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem;
+  }
+  .tile .k {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  }
+  .tile .v { font-size: 1.65rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+  .tile .s { font-size: 0.78rem; color: var(--ink-2); }
+
+  /* figures */
+  figure {
+    margin: 0.4rem 0 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.1rem 1.1rem 0.9rem; overflow-x: auto;
+  }
+  figcaption { font-size: 0.8rem; color: var(--muted); margin-top: 0.55rem; max-width: 60ch; }
+  .fig-title { font-size: 0.85rem; font-weight: 600; margin: 0 0 0.15rem; }
+  .fig-sub { font-size: 0.78rem; color: var(--ink-2); margin: 0 0 0.7rem; }
+  svg { display: block; max-width: 100%; height: auto; }
+  img.fig { display: block; max-width: 100%; height: auto; border-radius: 4px; }
+  svg text { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10.5px; fill: var(--muted); }
+  svg .val { fill: var(--ink-2); font-size: 10px; }
+  .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; margin: 0 0 0.6rem; font-size: 0.78rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .chip { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  /* pipeline */
+  ol.steps { list-style: none; margin: 0.3rem 0 0; padding: 0; display: flex; flex-direction: column; }
+  ol.steps li {
+    display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.9rem;
+    padding: 0.8rem 0; border-top: 1px solid var(--grid);
+  }
+  ol.steps li:last-child { border-bottom: 1px solid var(--grid); }
+  ol.steps .n {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--accent-ink); font-size: 0.8rem; padding-top: 0.15rem;
+  }
+  ol.steps .t { font-weight: 600; }
+  ol.steps .d { font-size: 0.88rem; color: var(--ink-2); max-width: 58ch; }
+  ol.steps code, td code, p code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85em; background: var(--wash); border-radius: 3px; padding: 0.05em 0.35em;
+  }
+
+  /* tables */
+  .tbl-wrap { overflow-x: auto; margin-top: 0.4rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 0.45rem 0.9rem 0.45rem 0; border-bottom: 1px solid var(--grid); }
+  th {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td:last-child, th:last-child { padding-right: 0; }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--wash);
+    border-radius: 0 6px 6px 0; padding: 0.85rem 1.1rem; max-width: 60ch;
+  }
+  .callout p { font-size: 0.95rem; }
+
+  ul.tight { margin: 0.2rem 0 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.45rem; }
+  ul.tight li { max-width: 60ch; }
+  ul.tight li::marker { color: var(--accent-ink); }
+
+  footer { border-top: 1px solid var(--grid); padding-top: 1.2rem; font-size: 0.78rem; color: var(--muted); }
+  footer p { max-width: 100%; }
+
+  /* tooltip */
+  #tip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--ink); color: var(--plane);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem; line-height: 1.45; padding: 0.4rem 0.6rem; border-radius: 5px;
+    max-width: 16rem; white-space: pre-line;
+  }
+  [data-tip] { cursor: default; }
+  @media (prefers-reduced-motion: no-preference) {
+    .hover-target { transition: opacity 120ms ease; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Project report · RadioML 2018.01A · Phase 2</p>
+    <h1>Scaling up: 10 modulations, and teaching the model to say "I don't know"</h1>
+    <p class="lede">The 3-class warm-up worked, so we broadened the same VGG-style network to <strong>10 modulations</strong> across the major signal families — then added a <strong>refuse-to-answer gate</strong> that lets the model abstain on signals too noisy to classify, instead of guessing.</p>
+    <div class="meta">
+      <span>2026-07-29</span>
+      <span>Silvermysti/5G-Signal-Modulation</span>
+      <span>TensorFlow 2.21 · Keras 3.14 · CPU only</span>
+    </div>
+    <div class="callout" style="margin-top: 1rem;">
+      <p><strong>Phase 2 of 2.</strong> The original 3-class warm-up (81.1%) is in the
+      <a href="../warmup-3class/report.html">warm-up report</a>.</p>
+    </div>
+  </header>
+
+  <section>
+    <div class="tiles">
+      <div class="tile">
+        <span class="k">Test accuracy</span>
+        <span class="v">66.3%</span>
+        <span class="s">16,000 held-out · chance = 10%</span>
+      </div>
+      <div class="tile">
+        <span class="k">With the gate</span>
+        <span class="v">90%</span>
+        <span class="s">accurate while answering 68%</span>
+      </div>
+      <div class="tile">
+        <span class="k">Model size</span>
+        <span class="v">159,818</span>
+        <span class="s">parameters · same VGG, wider head</span>
+      </div>
+      <div class="tile">
+        <span class="k">Training</span>
+        <span class="v">~15 min</span>
+        <span class="s">80,000 examples · 12 CPU cores</span>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>The headline finding:</strong> the flat "66%" hides real <em>structure</em>. The model is near-perfect on physically distinct modulations and vague only on look-alike families — and when noise destroys a signal it funnels the junk into a single "garbage-can" class rather than spreading the error around. Once you can <em>see</em> that structure, the fix is obvious: let the model abstain when it isn't sure. Gated that way, the same 66% model answers 68% of signals at 90% accuracy.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">01 · The task</p>
+    <h2>Ten modulations, two confusable "ladders"</h2>
+    <p>Same problem as before — name the modulation behind a raw 1024-sample I/Q snippet — but now across ten schemes chosen to span the major families. Two of them are deliberate <strong>ladders</strong>: series where each rung looks more like its neighbour, so we could watch <em>where</em> the model breaks. QPSK / 16 / 64 / 256QAM are the workhorses of real 5G data channels.</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>Class</th><th>Family</th><th>Role</th></tr>
+      <tr><td><strong>OOK</strong></td><td>amplitude (on/off)</td><td>easy anchor</td></tr>
+      <tr><td><strong>BPSK · QPSK · 8PSK</strong></td><td>phase-shift keying</td><td>PSK ladder — look alike</td></tr>
+      <tr><td><strong>16QAM · 64QAM · 256QAM</strong></td><td>quadrature-amplitude</td><td>QAM ladder — look alike</td></tr>
+      <tr><td><strong>FM</strong></td><td>analog frequency</td><td>easy anchor</td></tr>
+      <tr><td><strong>GMSK</strong></td><td>GSM / legacy cellular</td><td>—</td></tr>
+      <tr><td><strong>AM-DSB-WC</strong></td><td>analog amplitude</td><td>easy anchor</td></tr>
+    </table></div>
+    <p>As before, the network sees <strong>raw I/Q samples only</strong> — no Fourier transform, no hand-crafted features. Chance is now 1-in-10 (10%), not 1-in-3.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">02 · The pipeline</p>
+    <h2>Six small scripts, one per step</h2>
+    <ol class="steps">
+      <li><span class="n">1</span><div><span class="t">Data prep — <code>data_prep.py</code></span><br><span class="d">Memory-maps the 19.5&nbsp;GB signals file, pulls 8,000 random examples per class (80,000 total), normalizes each snippet to unit variance, stratified 80/20 split: 64,000 train / 16,000 test. Also gathers each example's ground-truth SNR.</span></div></li>
+      <li><span class="n">2</span><div><span class="t">Model — <code>model.py</code></span><br><span class="d">The paper's VGG-style 1D CNN, unchanged from Phase 1 except the final softmax widens from 3 outputs to 10 — sized automatically from the class list.</span></div></li>
+      <li><span class="n">3</span><div><span class="t">Training — <code>train.py</code></span><br><span class="d">Adam, cross-entropy, batch 128, early stopping on validation loss. ~15 minutes on CPU.</span></div></li>
+      <li><span class="n">4</span><div><span class="t">Evaluation — <code>evaluate.py</code></span><br><span class="d">Held-out accuracy, per-class precision/recall, confusion matrix, confidence check.</span></div></li>
+      <li><span class="n">5</span><div><span class="t">The gate — <code>gate.py</code></span><br><span class="d">Sweeps a confidence threshold to trade coverage for accuracy, recommends an operating point, and validates against ground-truth SNR.</span></div></li>
+      <li><span class="n">6</span><div><span class="t">ResNet — <code>resnet_model.py</code></span><br><span class="d">The paper's skip-connection variant, swappable via <code>--model resnet</code> (compared head-to-head in Phase 1).</span></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <p class="eyebrow">03 · Architecture</p>
+    <h2>Same network, a wider output head</h2>
+    <p>Nothing about the convolutional stack changed — that's the point. Broadening from 3 to 10 classes only widens the final softmax layer; everything upstream is identical to Phase 1's VGG.</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>Stage</th><th>Layers</th><th class="num">Output length</th></tr>
+      <tr><td>Input</td><td>1024 time-steps × 2 channels (I/Q)</td><td class="num">1024</td></tr>
+      <tr><td>Blocks 1–7</td><td>each: Conv1D(64, size 3, ReLU) → BatchNorm → MaxPool ÷2</td><td class="num">512 → … → 8</td></tr>
+      <tr><td>Flatten</td><td>8 × 64 → one vector</td><td class="num">512</td></tr>
+      <tr><td>Classifier</td><td>Dense 128 (SELU) → Dense 128 (SELU), AlphaDropout</td><td class="num">128</td></tr>
+      <tr><td>Output</td><td>Dense <strong>10</strong>, softmax → probabilities</td><td class="num">10</td></tr>
+    </table></div>
+    <p>159,818 parameters — barely up from Phase 1's 158,915 (only the output head grew).</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">04 · Training</p>
+    <h2>Learned fast, plateaued, and stopped itself</h2>
+    <figure>
+      <p class="fig-title">Accuracy per epoch</p>
+      <p class="fig-sub">64,000 training examples · batch 128 · Adam</p>
+      <div class="legend">
+        <span><span class="chip" style="background: var(--series-2)"></span>Training accuracy</span>
+        <span><span class="chip" style="background: var(--accent)"></span>Validation accuracy</span>
+      </div>
+      <svg viewBox="0 0 640 232" role="img" aria-label="Line chart of training and validation accuracy over 8 epochs. Both rise sharply then flatten: validation plateaus near 66 to 67 percent while training keeps drifting up to 70.7 percent. Early stopping halts at epoch 8 and restores the best epoch, 3.">
+        <g stroke="var(--grid)" stroke-width="1">
+          <line x1="40" y1="16" x2="620" y2="16"/>
+          <line x1="40" y1="67.4" x2="620" y2="67.4"/>
+          <line x1="40" y1="118.9" x2="620" y2="118.9"/>
+          <line x1="40" y1="170.3" x2="620" y2="170.3"/>
+        </g>
+        <line x1="40" y1="196" x2="620" y2="196" stroke="var(--baseline)" stroke-width="1"/>
+        <text x="34" y="20" text-anchor="end">100%</text>
+        <text x="34" y="71" text-anchor="end">80</text>
+        <text x="34" y="123" text-anchor="end">60</text>
+        <text x="34" y="174" text-anchor="end">40</text>
+        <!-- best-epoch marker -->
+        <line x1="200" y1="16" x2="200" y2="196" stroke="var(--baseline)" stroke-width="1" stroke-dasharray="3 4"/>
+        <text x="206" y="188">best epoch (3)</text>
+        <!-- train -->
+        <polyline fill="none" stroke="var(--series-2)" stroke-width="2" stroke-linejoin="round"
+          points="40,133.8 120,107.8 200,102.2 280,99.3 360,96.5 440,94.5 520,92.4 600,91.4"/>
+        <!-- val -->
+        <polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"
+          points="40,126.6 120,106.3 200,103.5 280,101.7 360,102.2 440,100.4 520,101.2 600,101.4"/>
+        <circle cx="200" cy="103.5" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+        <circle cx="600" cy="91.4" r="4.5" fill="var(--series-2)" stroke="var(--surface)" stroke-width="2"/>
+        <text x="590" y="86" text-anchor="end" class="val">70.7%</text>
+        <text x="200" y="120" text-anchor="middle" class="val" fill="var(--accent-ink)">66.0%</text>
+        <!-- x labels -->
+        <text x="40" y="212" text-anchor="middle">1</text>
+        <text x="200" y="212" text-anchor="middle">3</text>
+        <text x="360" y="212" text-anchor="middle">5</text>
+        <text x="520" y="212" text-anchor="middle">7</text>
+        <text x="600" y="212" text-anchor="middle">8</text>
+        <text x="330" y="228" text-anchor="middle">epoch</text>
+        <!-- hover targets -->
+        <g id="lc-hover"></g>
+      </svg>
+      <figcaption>Validation accuracy flattens at ~66–67% after epoch 3 while training accuracy drifts on to 70.7% — the model is getting more confident without getting more correct. Early stopping (on validation <em>loss</em>) halted at epoch 8 and restored epoch 3. Held-out test accuracy: 66.3%.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <p class="eyebrow">05 · Results</p>
+    <h2>A garbage-can class, and rock-solid anchors</h2>
+    <figure>
+      <p class="fig-title">Confusion matrix — held-out test set</p>
+      <p class="fig-sub">Rows: true modulation · columns: model's guess · row-normalized</p>
+      <img class="fig" src="../../results/confusion_matrix_vgg.png" alt="Ten by ten confusion matrix for the VGG model. The 8PSK column is a bright vertical stripe, showing many classes misclassified as 8PSK. QPSK and 256QAM are strongly confused with each other. Distinct classes like FM, AM, OOK, 16QAM and 64QAM have bright diagonals.">
+      <figcaption>The 8PSK column is a vertical stripe — nearly every class dumps a slice of its errors there. That single "when unsure, say 8PSK" sink accounts for ~47% of all errors.</figcaption>
+    </figure>
+    <p>Three findings read straight off the grid:</p>
+    <ul class="tight">
+      <li><strong>The "8PSK garbage can."</strong> 8PSK has poor precision (0.335) but high recall (0.796): 2,532 of the 5,390 total errors are "guessed 8PSK, was something else." When noise destroys a signal, the model funnels the junk into one class — the same thing OOK↔FM did in Phase 1, now concentrated in a single sink.</li>
+      <li><strong>QPSK ⇄ 256QAM.</strong> 256QAM called QPSK 581 times, QPSK called 256QAM 341 times — 922 errors on one pair. The confusion crosses <em>families</em>; the QAMs barely confuse each other. A tidy "the ladders blur internally" guess did <em>not</em> hold — you only learn this by running it.</li>
+      <li><strong>The anchors are rock-solid.</strong> When the model commits to a distinct modulation it is almost never wrong.</li>
+    </ul>
+    <div class="tbl-wrap"><table>
+      <tr><th>Class</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th>Read</th></tr>
+      <tr><td>FM</td><td class="num">1.000</td><td class="num">0.701</td><td class="num">0.824</td><td>when it says FM, never wrong</td></tr>
+      <tr><td>AM-DSB-WC</td><td class="num">0.997</td><td class="num">0.733</td><td class="num">0.844</td><td>trustworthy anchor</td></tr>
+      <tr><td>16QAM</td><td class="num">0.990</td><td class="num">0.579</td><td class="num">0.731</td><td>precise but under-claims</td></tr>
+      <tr><td>64QAM</td><td class="num">0.970</td><td class="num">0.795</td><td class="num">0.874</td><td>best all-round</td></tr>
+      <tr><td>OOK</td><td class="num">0.967</td><td class="num">0.649</td><td class="num">0.777</td><td>trustworthy anchor</td></tr>
+      <tr><td>256QAM</td><td class="num">0.683</td><td class="num">0.461</td><td class="num">0.551</td><td>lost to QPSK confusion</td></tr>
+      <tr><td>GMSK</td><td class="num">0.576</td><td class="num">0.664</td><td class="num">0.617</td><td>middling</td></tr>
+      <tr><td>BPSK</td><td class="num">0.598</td><td class="num">0.652</td><td class="num">0.624</td><td>PSK-ladder blur</td></tr>
+      <tr><td>QPSK</td><td class="num">0.504</td><td class="num">0.601</td><td class="num">0.548</td><td>PSK-ladder blur</td></tr>
+      <tr><td>8PSK</td><td class="num">0.335</td><td class="num">0.796</td><td class="num">0.471</td><td>the garbage-can class</td></tr>
+    </table></div>
+    <p>The model fails <em>gracefully</em>, and it <strong>knows when it's unsure</strong>: average confidence <strong>0.904 when correct</strong> vs <strong>0.305 when wrong</strong>, with only 2.9% of errors made confidently. That calibration is what the next section turns into a feature.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">06 · The refuse-to-answer gate</p>
+    <h2>Let it abstain, and 66% becomes 90%</h2>
+    <p>Forcing a guess on a signal noise has already destroyed is a mistake. Since the model reports its confidence (the top softmax probability), we let it <strong>abstain</strong> whenever that falls below a threshold, and judge it only on what it chose to answer. Two numbers describe any threshold: <strong>coverage</strong> (fraction answered) and <strong>selective accuracy</strong> (accuracy on those).</p>
+    <figure>
+      <p class="fig-title">Risk–coverage trade-off</p>
+      <p class="fig-sub">Raising the threshold moves left: answer fewer, be right more often</p>
+      <img class="fig" src="../../results/risk_coverage_vgg.png" alt="Risk-coverage curve. Selective accuracy is near 100 percent at low coverage and falls to 66 percent at full coverage, with a marked recommended point answering 68 percent of signals at 90 percent accuracy.">
+      <figcaption>The recommended operating point (red) answers 68% of signals at 90% accuracy; the dashed line is the 66% forced-answer baseline.</figcaption>
+    </figure>
+    <div class="tbl-wrap"><table>
+      <tr><th class="num">Min confidence</th><th class="num">Coverage</th><th class="num">Selective accuracy</th></tr>
+      <tr><td class="num">0.00 (no gate)</td><td class="num">100%</td><td class="num">66.3%</td></tr>
+      <tr><td class="num">0.50</td><td class="num">69.5%</td><td class="num">89.2%</td></tr>
+      <tr><td class="num">0.70</td><td class="num">60.9%</td><td class="num">94.5%</td></tr>
+      <tr><td class="num">0.90</td><td class="num">53.3%</td><td class="num">98.2%</td></tr>
+      <tr><td class="num">0.99</td><td class="num">48.2%</td><td class="num">99.5%</td></tr>
+    </table></div>
+    <div class="callout">
+      <p><strong>Recommended:</strong> at a threshold of <strong>0.53</strong>, the model answers <strong>68% of signals at 90% accuracy</strong> and abstains on the noisy 32% — versus 66% if forced to guess on everything. The same weights become far more trustworthy simply by letting the model stay quiet when it isn't sure.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">07 · SNR validation</p>
+    <h2>It really is abstaining on the noise</h2>
+    <p>This phase finally used the dataset's <strong>ground-truth SNR</strong> (signal-to-noise ratio) in <code>archive&nbsp;(1)/snrs.npy</code> — the earlier phase had been working around not having it. That lets us prove the gate filters by <em>signal quality</em>, not luck: at the recommended threshold, answered signals have a median SNR of <strong>+14&nbsp;dB</strong> and abstained ones <strong>−12&nbsp;dB</strong>.</p>
+    <figure>
+      <p class="fig-title">Accuracy vs true SNR</p>
+      <p class="fig-sub">16,000 test examples, grouped by real SNR (−20 to +30 dB)</p>
+      <img class="fig" src="../../results/accuracy_vs_snr_vgg.png" alt="Accuracy versus true SNR. A classic S-curve: flat near the 10 percent chance line below minus 14 dB, rising steeply through 0 dB, and plateauing near 94 percent above plus 4 dB.">
+      <figcaption>The paper's S-curve, now from real SNR labels: ~chance (10%) below −14 dB, rising through 0 dB, plateauing near 94%. It also confirms the blind-noise proxy from Phase 1 was right all along.</figcaption>
+    </figure>
+    <div class="callout">
+      <p><strong>Why the gate works, in one line:</strong> accuracy is set almost entirely by SNR, and confidence tracks SNR — so thresholding on confidence is really thresholding on "is there enough signal here to answer at all?"</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">08 · Against the paper</p>
+    <h2>What we replicated, and what's still open</h2>
+    <div class="tbl-wrap"><table>
+      <tr><th>Paper element</th><th>Status</th></tr>
+      <tr><td>Raw I/Q input, no expert features</td><td>replicated</td></tr>
+      <tr><td>VGG CNN layout (Table III)</td><td>replicated — output head 3 or 10 wide</td></tr>
+      <tr><td>ResNet layout (Table IV)</td><td>replicated (3-class head-to-head)</td></tr>
+      <tr><td>Training recipe (Adam, cross-entropy, early stop)</td><td>replicated</td></tr>
+      <tr><td>Accuracy-as-a-curve vs SNR</td><td>reproduced from ground-truth SNR</td></tr>
+      <tr><td>High-SNR accuracy ~98–99.8%</td><td>matched shape (~94% at high SNR on 10-class)</td></tr>
+      <tr><td>Multi-class confusion structure</td><td>reproduced (ladders + garbage-can sink)</td></tr>
+      <tr><td>Selective classification (abstain)</td><td>added — 68% coverage at 90% accuracy</td></tr>
+      <tr><td>XGBoost baseline</td><td>studied only, not built</td></tr>
+      <tr><td>Over-the-air, transfer learning</td><td>out of scope (needs SDR hardware)</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <p class="eyebrow">09 · Next</p>
+    <h2>Open threads</h2>
+    <ul class="tight">
+      <li><strong>ResNet on 10 classes</strong> — does the skip-connection model handle the confusable ladders any better, or build the same 8PSK sink?</li>
+      <li><strong>All 24 modulations</strong> — the full paper replication; the pipeline already scales, chance drops to ~4%.</li>
+      <li><strong>The harder trio</strong> — BPSK / QPSK / 8PSK alone, a focused test of whether the network learns phase structure.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Dataset: DeepSig RadioML 2018.01A (CC BY-NC-SA 4.0 — non-commercial, attribution required). Reference: T. O'Shea, T. Roy, T. C. Clancy, "Over the Air Deep Learning Based Radio Signal Classification," IEEE J-STSP, 2018. Code: <a href="https://github.com/Silvermysti/5G-Signal-Modulation">github.com/Silvermysti/5G-Signal-Modulation</a> (private).</p>
+  </footer>
+
+</div>
+
+<div id="tip" role="status"></div>
+
+<script>
+  // Shared tooltip for all [data-tip] marks
+  (function () {
+    var tip = document.getElementById('tip');
+    function show(e) {
+      var t = e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var x = e.clientX + 14, y = e.clientY + 14;
+      var r = tip.getBoundingClientRect();
+      if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - 10;
+      if (y + r.height > window.innerHeight - 8) y = e.clientY - r.height - 10;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    }
+    document.addEventListener('mousemove', show);
+    document.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  })();
+
+  // Hover targets for the training-curve chart (per-epoch readout)
+  (function () {
+    var svgGroup = document.getElementById('lc-hover');
+    var train = [54.2, 64.3, 66.5, 67.6, 68.7, 69.5, 70.3, 70.7];
+    var val   = [57.0, 64.9, 66.0, 66.7, 66.5, 67.2, 66.9, 66.8];
+    for (var i = 0; i < 8; i++) {
+      var r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('x', 40 + i * 80 - 40);
+      r.setAttribute('y', 16);
+      r.setAttribute('width', 80);
+      r.setAttribute('height', 180);
+      r.setAttribute('fill', 'transparent');
+      r.setAttribute('data-tip',
+        'Epoch ' + (i + 1) + '\ntrain ' + train[i].toFixed(1) + '%\nval   ' + val[i].toFixed(1) + '%');
+      svgGroup.appendChild(r);
+    }
+  })();
+</script>
+</body>
+</html>
