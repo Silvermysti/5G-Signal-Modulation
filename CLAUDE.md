@@ -61,22 +61,29 @@ units with skip connections, then 3 dense layers (SELU/SELU/Softmax). Build only
 Training recipe from the paper: Adam optimizer, categorical cross-entropy, inputs normalized
 to unit variance.
 
-## Current work: 3-modulation laptop build
+## Current work: laptop CNN, now scaled to 10 classes
 
-The user is recreating the paper's **VGG-style CNN as a learning exercise**, scoped down to run
-on a CPU laptop. Agreed parameters:
+The user is recreating the paper's **VGG-style CNN as a learning exercise**, scoped to run on a
+CPU laptop. History and current state:
 
 - **Framework: TensorFlow / Keras** (finalized — chosen to match the existing `.h5` and for
   beginner-friendliness; PyTorch was considered and deferred).
-- **3 classes only: `OOK`, `QPSK`, `FM`** (picked to be easy to tell apart for an encouraging
-  first result). A harder follow-up trio discussed: `BPSK`, `QPSK`, `8PSK`.
-- **~5,000 examples per class** (~15k total) — fits in RAM, trains on CPU in minutes.
-- Data prep plan: load `labels.npy` fully (235 MB is fine), find row indices for the 3 chosen
-  classes via `np.argmax`, subsample, then gather those rows from the `signals.npy` memmap
-  (each example is a contiguous ~8 KB block, so scattered fancy-indexing is fast enough).
+- **Started with 3 easy classes** (`OOK`, `QPSK`, `FM`, 5k each) → 81.1% VGG / 82.1% ResNet.
+  Then **broadened to 10 classes** (see `CHOSEN_CLASSES` in `scripts/data_prep.py`), 8,000 each
+  (~80k total, 64k train / 16k test) → **66.3% VGG** (chance = 10%). ResNet not yet retrained on
+  the 10-class set.
+- The 10 classes deliberately include two confusable "ladders" — PSK (BPSK/QPSK/8PSK) and QAM
+  (16/64/256QAM) — plus distinct anchors (OOK, FM, GMSK, AM-DSB-WC). Key observed pattern: 8PSK
+  becomes a low-SNR "garbage-can" class (precision 0.335, ~47% of all errors land in its column),
+  and QPSK⇄256QAM is the biggest cross-family confusion.
+- Model/train/evaluate already generalize to any class count: the output head is sized from
+  `len(classes)`, saved weights are `models/{vgg,resnet}.keras` (the old `_3mod` suffix is gone).
+- Data prep: load `labels.npy` fully (235 MB), find row indices per chosen class via `np.argmax`,
+  subsample, gather from the `signals.npy` memmap (each example is a contiguous ~8 KB block, so
+  scattered fancy-indexing is fast — 80k rows in ~20s).
 - **Reminder:** per-example SNR is absent from these files, so the model trains across all noise
-  levels mixed together (including unclassifiable low-SNR snippets). Expect ~70–90% accuracy on
-  the easy trio, NOT the paper's ~98% peak. This is expected, not a bug.
+  levels mixed together (including unclassifiable low-SNR snippets). The 66% average is near-100%
+  on clean signals and near-chance on the noisiest third — an information limit, not a bug.
 
 Build the work as separate small, commented scripts (one per step: data prep, model, train,
 evaluate) so the user can read and run them individually.

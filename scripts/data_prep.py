@@ -4,11 +4,11 @@ Step 2 — DATA PREP
 
 Goal: pull a small, balanced training set out of the giant RadioML dataset.
 
-We only want 3 modulations (OOK, QPSK, FM), 5,000 examples of each.
+We want the 10 modulations listed in CHOSEN_CLASSES below, 8,000 examples of each.
 The signals file is ~19.5 GB, so we must NOT load it all into memory. Instead we:
 
   1. Load the small labels file fully (235 MB is fine) to find WHICH rows we want.
-  2. Randomly pick 5,000 row-numbers per class.
+  2. Randomly pick PER_CLASS row-numbers per class.
   3. Memory-map the big signals file and read ONLY those rows off disk.
   4. Normalize each snippet, then split into train / test sets.
   5. Save the result to the `prepared/` folder so the next scripts can reuse it instantly.
@@ -25,8 +25,21 @@ from sklearn.model_selection import train_test_split
 # ----------------------------------------------------------------------------
 # Settings you can tweak
 # ----------------------------------------------------------------------------
-CHOSEN_CLASSES = ["OOK", "QPSK", "FM"]   # the 3 modulations we want
-PER_CLASS = 5000                          # how many examples of each
+# 10 modulations spanning the major families. Two deliberately-confusable
+# "ladders" are included so the confusion matrix shows real structure:
+#   PSK ladder:  BPSK -> QPSK -> 8PSK   (denser phase steps, look alike)
+#   QAM ladder:  16QAM -> 64QAM -> 256QAM (denser constellations, look alike)
+# plus distinct anchors (OOK, FM, AM, GMSK) that stay easy to tell apart.
+# QPSK / 16 / 64 / 256QAM are the workhorses of real 5G data channels.
+CHOSEN_CLASSES = [
+    "OOK",                    # amplitude on/off  -- easy anchor
+    "BPSK", "QPSK", "8PSK",   # PSK ladder        -- confusable cluster
+    "16QAM", "64QAM", "256QAM",  # QAM ladder     -- confusable cluster
+    "FM",                     # analog frequency  -- easy anchor
+    "GMSK",                   # GSM/legacy cellular
+    "AM-DSB-WC",              # broadcast AM      -- analog anchor
+]
+PER_CLASS = 8000                          # how many examples of each
 TEST_FRACTION = 0.2                       # 20% held out for honest testing
 SEED = 42                                 # fixed randomness => reproducible runs
 

@@ -51,7 +51,7 @@ args = parser.parse_args()
 
 HERE = Path(__file__).resolve().parent
 PREP_DIR = HERE.parent / "prepared"
-MODEL_PATH = HERE.parent / "models" / f"{args.model}_3mod.keras"
+MODEL_PATH = HERE.parent / "models" / f"{args.model}.keras"
 RESULTS_DIR = HERE.parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 

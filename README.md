@@ -6,33 +6,42 @@ This is a scaled-down replication of the VGG-style convolutional network from
 O'Shea, Roy & Clancy, *[Over the Air Deep Learning Based Radio Signal
 Classification](https://arxiv.org/abs/1712.04578)* (IEEE J-STSP, 2018), built as a
 hands-on way to learn deep learning. The paper classifies 24 modulations using
-2.55M examples on a V100 GPU; this trains on **3 modulations** and **15,000
-examples** in about five minutes on a CPU laptop.
+2.55M examples on a V100 GPU; this trains on **10 modulations** and **80,000
+examples** in about fifteen minutes on a CPU laptop. (It began as an easier
+**3-class** warm-up — OOK/QPSK/FM at 81.1% — kept below as context.)
 
 | | |
 |---|---|
-| **Test accuracy** | **81.1%** on 3,000 held-out examples |
-| **On the cleaner 60% of signals** | **99.4%** — matches the paper's high-SNR result |
-| **On the noisiest 30%** | ~42%, where random guessing is 33% |
-| **Model** | VGG-style 1D CNN, 158,915 parameters |
+| **Test accuracy (10 classes)** | **66.3%** on 16,000 held-out examples (chance = 10%) |
+| **Trustworthy anchors** | FM, AM, OOK, 16QAM, 64QAM all score **>96% precision** |
+| **Warm-up (3 classes)** | **81.1%** — 99.4% on clean signals, ~42% on the noisiest third |
+| **Model** | VGG-style 1D CNN, 159,818 parameters |
 | **Hardware** | 12 CPU cores, no GPU |
 
-That 81% is an average of two very different regimes: near-perfect where the
-signal is clean, near-chance where noise has destroyed the modulation before
-capture. Splitting them apart turned out to be the most interesting part of the
-project — see the [full report](report/README.md).
+The 66% average hides *structure*. The network is near-perfect on physically
+distinct modulations and vague only on look-alike families — and when noise
+destroys a signal it funnels the junk into one "garbage-can" class (8PSK) rather
+than spreading the error around. Reading that pattern out of the confusion matrix
+is the most interesting part of the project — see the
+[full report](report/README.md).
 
 ![Confusion matrix](results/confusion_matrix_vgg.png)
 
-## The three classes
+## The ten classes
 
-Picked to be physically distinct, for an encouraging first result.
+Chosen to span the major modulation families, with two deliberately *confusable*
+"ladders" so the confusion matrix shows real structure, plus distinct anchors that
+stay easy to tell apart. QPSK / 16 / 64 / 256QAM are the workhorses of real 5G
+data channels.
 
-| Class | Full name | How it carries data |
+| Class | Family | Role |
 |---|---|---|
-| `OOK` | On-Off Keying | switches the carrier on and off |
-| `QPSK` | Quadrature Phase-Shift Keying | jumps between four phase angles |
-| `FM` | Frequency Modulation | bends the carrier frequency continuously |
+| `OOK` | amplitude (on/off) | easy anchor |
+| `BPSK`, `QPSK`, `8PSK` | phase-shift keying | **PSK ladder** (look alike) |
+| `16QAM`, `64QAM`, `256QAM` | quadrature-amplitude | **QAM ladder** (look alike) |
+| `FM` | analog frequency | easy anchor |
+| `GMSK` | GSM / legacy cellular | — |
+| `AM-DSB-WC` | analog amplitude | easy anchor |
 
 Following the paper's central thesis, the network sees **raw I/Q samples only** —
 no Fourier transform, no hand-crafted features. It learns its own.
@@ -45,18 +54,19 @@ Input  1024 x 2  (I/Q)
 Flatten                                                          512
 Dense(128, SELU) -> AlphaDropout
 Dense(128, SELU) -> AlphaDropout
-Dense(3, Softmax)
+Dense(10, Softmax)
 ```
 
 Layer-for-layer the paper's Table III, with the output head narrowed from 24
-classes to 3. Trained with Adam and cross-entropy, stopping when validation loss
-stops improving — the paper's stated recipe.
+classes to 10. Trained with Adam and cross-entropy, stopping when validation loss
+stops improving — the paper's stated recipe. Only the final layer's width changes
+with the number of classes; the script sizes it automatically.
 
 ## Repository layout
 
 ```
 scripts/
-  data_prep.py     memory-maps the 19.5 GB dataset, pulls 5,000 examples per
+  data_prep.py     memory-maps the 19.5 GB dataset, pulls 8,000 examples per
                    class, normalizes to unit variance, 80/20 stratified split
   model.py         the VGG CNN (run directly to print the architecture)
   resnet_model.py  the ResNet variant with skip connections
@@ -64,7 +74,7 @@ scripts/
   evaluate.py      accuracy, precision/recall, confusion matrix, confidence check
 prepared/          the sampled + split arrays produced by data_prep.py
                    (X_train/X_test/y_train/y_test.npy, classes.txt)
-models/            trained weights — vgg_3mod.keras, resnet_3mod.keras
+models/            trained weights — vgg.keras, resnet.keras
 report/            full write-up (HTML with interactive charts + markdown summary)
 results/           generated figures
 Data/              the raw RadioML dataset (gitignored — see Setup)
@@ -95,19 +105,24 @@ the rows it needs.
 ## Running
 
 ```bash
-.venv/bin/python scripts/data_prep.py   # ~5 seconds
-.venv/bin/python scripts/train.py       # ~5 minutes on CPU
+.venv/bin/python scripts/data_prep.py   # ~20 seconds (pulls 80,000 examples)
+.venv/bin/python scripts/train.py       # ~15 minutes on CPU (10 classes)
 .venv/bin/python scripts/evaluate.py    # metrics + confusion matrix
 ```
 
+Add `--model resnet` to `train.py`/`evaluate.py` to run the residual network
+instead. The class list and per-class count live at the top of `data_prep.py`.
+
 ## Architectures built
 
-- **VGG CNN** — 81.1% test accuracy, 158,915 parameters
-- **ResNet** — 82.1% test accuracy, 165,507 parameters (skip connections add 1% via easier training, but both hit the same noise ceiling)
+- **VGG CNN** — 66.3% on 10 classes (81.1% on the easier 3-class warm-up)
+- **ResNet** — skip-connection variant; on the 3-class task it reached 82.1% vs
+  VGG's 81.1%. Only ~1% better, because the bottleneck is data quality (noise),
+  not the model — both hit the same ceiling.
 
-The paper achieves 98.3% (VGG) and 99.8% (ResNet) at high SNR on 24 classes. We match
-the curve shape (99.4% at high SNR on this 3-class task) but both models degrade equally
-at low SNR — the bottleneck is data quality, not architecture.
+The paper achieves 98.3% (VGG) and 99.8% (ResNet) at high SNR on all 24 classes.
+The lesson we reproduced: **architecture matters less than signal quality.** A
+cleverer network cannot recover information that noise destroyed before capture.
 
 ## Not built (yet)
 

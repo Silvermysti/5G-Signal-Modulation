@@ -64,7 +64,7 @@ HERE = Path(__file__).resolve().parent
 PREP_DIR = HERE.parent / "prepared"
 MODEL_DIR = HERE.parent / "models"
 MODEL_DIR.mkdir(exist_ok=True)
-MODEL_PATH = MODEL_DIR / f"{args.model}_3mod.keras"   # where we save the trained model
+MODEL_PATH = MODEL_DIR / f"{args.model}.keras"   # where we save the trained model
 
 # Make the run reproducible (same starting weights + shuffling every time).
 keras.utils.set_random_seed(SEED)
