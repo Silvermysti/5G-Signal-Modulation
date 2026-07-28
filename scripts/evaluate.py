@@ -22,10 +22,11 @@ Vocabulary:
   * f1        = a single score blending precision and recall.
 
 Note on SNR: the paper reports accuracy as a CURVE vs signal-to-noise ratio,
-because noise is the dominant factor. We can't reproduce that curve -- the
-per-example SNR is not stored in our three data files (it lives in the original
-RadioML HDF5). So our numbers mix clean and hopelessly-noisy snippets together.
-That is why we score ~81% and not the paper's ~98% (which is their HIGH-SNR peak).
+because noise is the dominant factor. Our single number mixes clean and
+hopelessly-noisy snippets together, which is why it sits well below the paper's
+~98% HIGH-SNR peak. The ground-truth per-example SNR lives in `archive (1)/
+snrs.npy` (aligned row-for-row with the dataset); data_prep.py now carries it
+through, and scripts/gate.py uses it to plot the real accuracy-vs-SNR curve.
 
 Run it with:   .venv/bin/python scripts/evaluate.py
                .venv/bin/python scripts/evaluate.py --model resnet

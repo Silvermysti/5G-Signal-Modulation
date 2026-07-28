@@ -13,6 +13,7 @@ examples** in about fifteen minutes on a CPU laptop. (It began as an easier
 | | |
 |---|---|
 | **Test accuracy (10 classes)** | **66.3%** on 16,000 held-out examples (chance = 10%) |
+| **With a "refuse to answer" gate** | **90% accurate while still answering 68%** of signals |
 | **Trustworthy anchors** | FM, AM, OOK, 16QAM, 64QAM all score **>96% precision** |
 | **Warm-up (3 classes)** | **81.1%** — 99.4% on clean signals, ~42% on the noisiest third |
 | **Model** | VGG-style 1D CNN, 159,818 parameters |
@@ -46,6 +47,21 @@ data channels.
 Following the paper's central thesis, the network sees **raw I/Q samples only** —
 no Fourier transform, no hand-crafted features. It learns its own.
 
+## Knowing when not to answer
+
+Forcing a guess on a signal that noise has already destroyed is a mistake. The
+model reports how confident it is, so `scripts/gate.py` lets it **abstain** when
+that confidence is low — "too noisy, I won't answer." Tuned to stay 90% accurate
+*when it answers*, it still responds to **68% of signals** and quietly drops the
+rest (vs 66% if forced to guess on everything).
+
+That the gate really is filtering by noise — not luck — is provable: the dataset's
+ground-truth SNR (signal-to-noise ratio) shows the answered signals have a median
+of **+14 dB** and the abstained ones **−12 dB**. Plotting accuracy against true SNR
+reproduces the paper's classic S-curve.
+
+![Accuracy vs SNR](results/accuracy_vs_snr_vgg.png)
+
 ## Architecture
 
 ```
@@ -72,8 +88,9 @@ scripts/
   resnet_model.py  the ResNet variant with skip connections
   train.py         training with early stopping + best-model checkpointing
   evaluate.py      accuracy, precision/recall, confusion matrix, confidence check
+  gate.py          refuse-to-answer gate: risk-coverage + accuracy-vs-SNR curves
 prepared/          the sampled + split arrays produced by data_prep.py
-                   (X_train/X_test/y_train/y_test.npy, classes.txt)
+                   (X_train/X_test/y_train/y_test.npy, snr_*.npy, classes.txt)
 models/            trained weights — vgg.keras, resnet.keras
 report/            full write-up (HTML with interactive charts + markdown summary)
 results/           generated figures
@@ -108,10 +125,12 @@ the rows it needs.
 .venv/bin/python scripts/data_prep.py   # ~20 seconds (pulls 80,000 examples)
 .venv/bin/python scripts/train.py       # ~15 minutes on CPU (10 classes)
 .venv/bin/python scripts/evaluate.py    # metrics + confusion matrix
+.venv/bin/python scripts/gate.py        # refuse-to-answer gate + SNR curves
 ```
 
-Add `--model resnet` to `train.py`/`evaluate.py` to run the residual network
-instead. The class list and per-class count live at the top of `data_prep.py`.
+Add `--model resnet` to `train.py`/`evaluate.py`/`gate.py` to run the residual
+network instead. The class list and per-class count live at the top of
+`data_prep.py`; `gate.py` takes `--target-accuracy` to tune how strict it is.
 
 ## Architectures built
 

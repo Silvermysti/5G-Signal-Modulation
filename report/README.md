@@ -75,7 +75,48 @@ it is almost never wrong:
 The model fails *gracefully*: near-perfect on distinct signals, vague only on
 look-alikes. It also **knows when it is unsure** — average confidence 0.904 when
 correct vs 0.305 when wrong, with only 2.9% of errors made confidently. That
-calibration is exactly what a "refuse to answer when too noisy" gate would need.
+calibration is exactly what the next section turns into a feature.
+
+---
+
+## The refuse-to-answer gate (selective classification)
+
+Forcing a guess on a signal that noise has already destroyed is a mistake. Since
+the model reports how confident it is (the top softmax probability), we can let it
+**abstain** — "too noisy, I won't answer" — whenever that confidence falls below a
+threshold. We then judge it only on the questions it chose to answer. Two numbers
+describe any threshold: **coverage** (fraction answered) and **selective accuracy**
+(accuracy on those). `scripts/gate.py` sweeps the threshold and picks an operating
+point.
+
+![Risk-coverage curve](../results/risk_coverage_vgg.png)
+
+| Min confidence | Coverage | Selective accuracy |
+|---|---|---|
+| 0.00 (no gate) | 100% | 66.3% |
+| 0.50 | 69.5% | 89.2% |
+| 0.70 | 60.9% | 94.5% |
+| 0.90 | 53.3% | 98.2% |
+| 0.99 | 48.2% | 99.5% |
+
+**Recommended operating point:** at a threshold of **0.53**, the model **answers
+68% of signals at 90% accuracy** and abstains on the noisy 32% — versus 66% if
+forced to guess on everything. The same model becomes far more trustworthy simply
+by letting it stay quiet when it isn't sure.
+
+### It really is abstaining on the noise
+
+Because `archive (1)/snrs.npy` gives the **ground-truth SNR** per example (finally —
+the whole project had been working around not having it), we can prove the gate
+filters by signal quality rather than guessing:
+
+- Median SNR of **answered** signals: **+14 dB**. Median SNR of **abstained**
+  signals: **−12 dB**. The gate quietly drops the junk.
+- The true **accuracy-vs-SNR** curve (below) is the paper's S-curve exactly: flat at
+  ~chance (10%) below −14 dB, rising through 0 dB, plateauing near 94%. This also
+  confirms the blind-noise proxy from the 3-class experiment was right all along.
+
+![Accuracy vs true SNR](../results/accuracy_vs_snr_vgg.png)
 
 ---
 
@@ -128,9 +169,10 @@ cannot recover information noise already destroyed. Both models hit the same cei
 | VGG CNN layout (Table III) | replicated layer-for-layer (output head 3 or 10 wide) |
 | ResNet layout (Table IV) | replicated with functional API |
 | Training recipe (Adam, cross-entropy, early stop) | replicated |
-| Accuracy-as-a-curve vs SNR | approximated via blind noise proxies |
-| High-SNR accuracy ~98.3% (VGG), 99.8% (ResNet) | matched shape (99.4% at high SNR on 3-class) |
+| Accuracy-as-a-curve vs SNR | reproduced from ground-truth SNR (S-curve, `gate.py`) |
+| High-SNR accuracy ~98.3% (VGG), 99.8% (ResNet) | matched shape (~94% at high SNR on 10-class) |
 | Multi-class confusion structure | reproduced (10-class ladders + garbage-can sink) |
+| Selective classification (abstain option) | added — 68% coverage at 90% accuracy |
 | XGBoost baseline | studied only, not built |
 | Over-the-air testing, transfer learning | out of scope (needs SDR hardware) |
 
@@ -140,10 +182,12 @@ cannot recover information noise already destroyed. Both models hit the same cei
 .venv/bin/python scripts/data_prep.py   # pull + normalize 80k examples (~20s)
 .venv/bin/python scripts/train.py       # train VGG, ~15 min on CPU (10 classes)
 .venv/bin/python scripts/evaluate.py    # metrics + confusion matrix
+.venv/bin/python scripts/gate.py        # refuse-to-answer gate + SNR curves
 ```
 
 The class list and per-class count live at the top of `scripts/data_prep.py`; add
-`--model resnet` to train/evaluate to use the residual network instead.
+`--model resnet` to train/evaluate/gate to use the residual network instead, or
+`--target-accuracy 0.95` to `gate.py` for a stricter gate.
 
 Dataset: DeepSig RadioML 2018.01A, CC BY-NC-SA 4.0 (non-commercial, attribution
 required). The dataset and trained model are gitignored — see the repo root

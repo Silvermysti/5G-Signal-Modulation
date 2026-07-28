@@ -38,11 +38,13 @@ Data/
 - `classes.txt` is not pure JSON — it's a Python assignment (`classes = [...]`). Parse with
   `ast.literal_eval` on the bracketed part, or read manually. Class order is significant and
   matches the label columns.
-- **SNR (signal-to-noise ratio) is the dominant variable** in this dataset, but the SNR value
-  for each example is **not stored in these three files** — the standard RadioML 2018.01A
-  distribution carries it in the original HDF5. Accuracy must be reported *as a curve vs SNR*,
-  not as a single number, per the paper. If SNR-stratified evaluation is needed, confirm where
-  the per-example SNR lives before writing that code.
+- **SNR (signal-to-noise ratio) is the dominant variable** in this dataset. It is not in the
+  three main files, but ground-truth per-example SNR **does exist** at `archive (1)/snrs.npy`
+  (shape `(2555904, 1)` float32, −20..+30 dB in 2 dB steps, aligned row-for-row with
+  `signals.npy`/`labels.npy`). `data_prep.py` gathers it (guarded by file existence) and saves
+  `prepared/snr_{train,test}.npy`; `scripts/gate.py` uses it for the real accuracy-vs-SNR
+  curve. Accuracy should still be reported *as a curve vs SNR*, not a single number, per the
+  paper. (`archive (1)/` also holds the pretrained run's train/val loss+acc history .npy files.)
 
 ## Model architectures (from the paper, the spec to match)
 

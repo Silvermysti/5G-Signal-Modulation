@@ -49,6 +49,13 @@ DATA_DIR = HERE.parent / "Data"
 OUT_DIR = HERE.parent / "prepared"
 OUT_DIR.mkdir(exist_ok=True)
 
+# Ground-truth signal-to-noise ratio (SNR) per example. This is the "how clean
+# is this snippet" number, in decibels (-20 = buried in noise, +30 = crystal
+# clear). It lives outside Data/ and lines up row-for-row with signals.npy. If
+# it's present we carry it through so later scripts can check the model against
+# real noise levels; if it's missing everything still works without it.
+SNR_PATH = HERE.parent / "archive (1)" / "snrs.npy"
+
 rng = np.random.default_rng(SEED)  # our own random-number generator, seeded
 
 # ----------------------------------------------------------------------------
@@ -72,7 +79,7 @@ label_idx = np.argmax(labels, axis=1)              # turn one-hot into 0..23 per
 print("Loaded labels:", labels.shape)
 
 picked_rows = []   # the row-numbers we will read from the big file
-picked_y = []      # the NEW label (0,1,2) for our 3-class problem
+picked_y = []      # the NEW label (0..N-1) for our chosen-class problem
 for new_label, col in enumerate(chosen_cols):
     rows_for_class = np.flatnonzero(label_idx == col)   # all rows of this modulation
     if len(rows_for_class) < PER_CLASS:
@@ -97,9 +104,20 @@ signals_mm = np.load(DATA_DIR / "signals.npy", mmap_mode="r")  # no data loaded 
 print("Signals memmap:", signals_mm.shape, signals_mm.dtype)
 
 # Fancy-indexing a memmap reads just those rows from disk into a real array.
-X = np.asarray(signals_mm[picked_rows], dtype=np.float32)      # shape (15000, 1024, 2)
+X = np.asarray(signals_mm[picked_rows], dtype=np.float32)      # shape (80000, 1024, 2)
 print("Gathered signal subset into RAM:", X.shape,
       f"({X.nbytes / 1e6:.0f} MB)")
+
+# Gather the matching SNR for each picked row (same order as X), if available.
+# snrs.npy is (N, 1); we flatten to a plain 1-D array of one number per example.
+picked_snr = None
+if SNR_PATH.exists():
+    snrs_mm = np.load(SNR_PATH, mmap_mode="r")
+    picked_snr = np.asarray(snrs_mm[picked_rows], dtype=np.float32).reshape(-1)
+    print(f"Gathered ground-truth SNR: {picked_snr.shape[0]} values, "
+          f"range {picked_snr.min():.0f}..{picked_snr.max():.0f} dB")
+else:
+    print(f"(No SNR file at {SNR_PATH} -- skipping SNR, everything else still works.)")
 
 # ----------------------------------------------------------------------------
 # 4. Normalize each snippet to unit variance (the paper's recipe)
@@ -111,11 +129,22 @@ per_example_std[per_example_std == 0] = 1.0           # avoid divide-by-zero
 X = X / per_example_std
 
 # ----------------------------------------------------------------------------
-# 5. Train / test split (stratify keeps the 3 classes balanced in both halves)
+# 5. Train / test split (stratify keeps the classes balanced in both halves)
+#    The split depends only on the seed, test_size and stratify labels, so it is
+#    identical whether or not we also hand it the SNR array -- adding SNR does
+#    NOT change which rows land in X_test. That keeps an already-trained model
+#    valid after a re-run.
 # ----------------------------------------------------------------------------
-X_train, X_test, y_train, y_test = train_test_split(
-    X, picked_y, test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
-)
+if picked_snr is not None:
+    X_train, X_test, y_train, y_test, snr_train, snr_test = train_test_split(
+        X, picked_y, picked_snr,
+        test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
+    )
+else:
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, picked_y, test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
+    )
+    snr_train = snr_test = None
 print(f"Train set: {X_train.shape[0]} examples | Test set: {X_test.shape[0]} examples")
 
 # Save everything for the train/evaluate scripts to load.
@@ -123,6 +152,10 @@ np.save(OUT_DIR / "X_train.npy", X_train)
 np.save(OUT_DIR / "X_test.npy", X_test)
 np.save(OUT_DIR / "y_train.npy", y_train)
 np.save(OUT_DIR / "y_test.npy", y_test)
+if snr_test is not None:
+    np.save(OUT_DIR / "snr_train.npy", snr_train)
+    np.save(OUT_DIR / "snr_test.npy", snr_test)
+    print("Also saved per-example SNR: snr_train.npy, snr_test.npy")
 (OUT_DIR / "classes.txt").write_text("\n".join(CHOSEN_CLASSES))
 print(f"Saved prepared data to: {OUT_DIR}")
 print("Done. Next step: train the model.")
