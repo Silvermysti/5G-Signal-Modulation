@@ -22,7 +22,7 @@ signal is clean, near-chance where noise has destroyed the modulation before
 capture. Splitting them apart turned out to be the most interesting part of the
 project — see the [full report](report/README.md).
 
-![Confusion matrix](results/confusion_matrix.png)
+![Confusion matrix](results/confusion_matrix_vgg.png)
 
 ## The three classes
 

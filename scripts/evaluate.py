@@ -28,11 +28,13 @@ RadioML HDF5). So our numbers mix clean and hopelessly-noisy snippets together.
 That is why we score ~81% and not the paper's ~98% (which is their HIGH-SNR peak).
 
 Run it with:   .venv/bin/python scripts/evaluate.py
+               .venv/bin/python scripts/evaluate.py --model resnet
 """
 
 import os
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # hush TF startup noise
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -42,9 +44,14 @@ matplotlib.use("Agg")  # draw to a file, not a window (we have no desktop here)
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 
+parser = argparse.ArgumentParser(description="Evaluate a trained classifier.")
+parser.add_argument("--model", choices=["vgg", "resnet"], default="vgg",
+                    help="which trained model to grade (default: vgg)")
+args = parser.parse_args()
+
 HERE = Path(__file__).resolve().parent
 PREP_DIR = HERE.parent / "prepared"
-MODEL_PATH = HERE.parent / "models" / "vgg_3mod.keras"
+MODEL_PATH = HERE.parent / "models" / f"{args.model}_3mod.keras"
 RESULTS_DIR = HERE.parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
@@ -107,7 +114,7 @@ ax.set_xticks(range(len(classes)), classes)
 ax.set_yticks(range(len(classes)), classes)
 ax.set_xlabel("Model's guess")
 ax.set_ylabel("True modulation")
-ax.set_title(f"Confusion matrix — overall accuracy {accuracy:.1%}")
+ax.set_title(f"{args.model.upper()} — confusion matrix, accuracy {accuracy:.1%}")
 
 # Write the number inside each square (white text on the dark squares).
 for i in range(len(classes)):
@@ -118,7 +125,7 @@ for i in range(len(classes)):
 
 fig.colorbar(im, ax=ax, label="% of that true class")
 fig.tight_layout()
-out_png = RESULTS_DIR / "confusion_matrix.png"
+out_png = RESULTS_DIR / f"confusion_matrix_{args.model}.png"
 fig.savefig(out_png, dpi=150)
 print(f"Saved heatmap to: {out_png}\n")
 

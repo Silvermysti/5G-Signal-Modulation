@@ -27,19 +27,30 @@ Vocabulary (first time each appears):
                  from the TEST set, which we keep untouched until Step 5.
 
 Run it with:   .venv/bin/python scripts/train.py
+               .venv/bin/python scripts/train.py --model resnet
 On a CPU laptop this takes a few minutes.
 """
 
 import os
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # hush TF startup noise
 
+import argparse
 from pathlib import Path
 
 import numpy as np
 import keras
 
-# Import the model-builder we wrote in Step 3 (same folder).
+# Import both model-builders (Step 3 and Step 6, same folder).
 from model import build_vgg_cnn
+from resnet_model import build_resnet
+
+# Which architectures this script knows how to train.
+BUILDERS = {"vgg": build_vgg_cnn, "resnet": build_resnet}
+
+parser = argparse.ArgumentParser(description="Train a modulation classifier.")
+parser.add_argument("--model", choices=BUILDERS, default="vgg",
+                    help="which architecture to train (default: vgg)")
+args = parser.parse_args()
 
 # ----------------------------------------------------------------------------
 # Settings you can tweak
@@ -53,7 +64,7 @@ HERE = Path(__file__).resolve().parent
 PREP_DIR = HERE.parent / "prepared"
 MODEL_DIR = HERE.parent / "models"
 MODEL_DIR.mkdir(exist_ok=True)
-MODEL_PATH = MODEL_DIR / "vgg_3mod.keras"   # where we save the trained model
+MODEL_PATH = MODEL_DIR / f"{args.model}_3mod.keras"   # where we save the trained model
 
 # Make the run reproducible (same starting weights + shuffling every time).
 keras.utils.set_random_seed(SEED)
@@ -71,9 +82,10 @@ print("Classes:", classes)
 print("Train:", X_train.shape, "| Test:", X_test.shape)
 
 # ----------------------------------------------------------------------------
-# 2. Build the model (blank, from Step 3)
+# 2. Build the model (blank -- either the VGG from Step 3 or the ResNet)
 # ----------------------------------------------------------------------------
-model = build_vgg_cnn(input_shape=X_train.shape[1:], n_classes=len(classes))
+print(f"Architecture: {args.model}")
+model = BUILDERS[args.model](input_shape=X_train.shape[1:], n_classes=len(classes))
 model.summary()
 
 # ----------------------------------------------------------------------------
