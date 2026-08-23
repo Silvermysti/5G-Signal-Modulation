@@ -120,7 +120,7 @@ def build_resnet(input_shape=(1024, 2), n_classes=3, n_stacks=6, filters=32):
     outputs = layers.Dense(n_classes, activation="softmax", name="output")(x)
 
     # The functional API: hand Keras the start and end, it works out the graph.
-    return keras.Model(inputs, outputs, name="resnet_3mod")
+    return keras.Model(inputs, outputs, name="resnet_modulation")
 
 
 if __name__ == "__main__":

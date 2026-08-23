@@ -388,16 +388,39 @@
   </section>
 
   <section>
-    <p class="eyebrow">08 · Against the paper</p>
+    <p class="eyebrow">08 · VGG vs ResNet</p>
+    <h2>A second architecture hits the same noise ceiling</h2>
+    <p>Phase 1 compared VGG and ResNet on the easy 3-class task; here we trained the paper's <strong>ResNet</strong> (skip connections) on the same 10 classes. The average barely moved — <strong>67.5%</strong> vs VGG's 66.3%, just <strong>+1.2%</strong> — the same tiny gain we saw before. But the confusion matrix tells a more interesting story than the average does.</p>
+    <figure>
+      <p class="fig-title">Confusion matrix — ResNet, held-out test set</p>
+      <p class="fig-sub">Rows: true modulation · columns: model's guess · row-normalized</p>
+      <img class="fig" src="../../results/confusion_matrix_resnet.png" alt="Ten by ten confusion matrix for the ResNet model. The 8PSK column is no longer a bright stripe; instead the OOK column is now the vertical stripe that collects errors from every class. QPSK and 256QAM remain confused with each other.">
+      <figcaption>ResNet <em>fixes</em> 8PSK (precision 0.335 → 0.608) — but the junk didn't vanish, it relocated. The OOK column is now the vertical stripe: OOK precision falls to 0.402 while its recall climbs to 0.791. The garbage-can just moved.</figcaption>
+    </figure>
+    <p>The headline finding: <strong>a different architecture didn't remove the "dump the unclassifiable junk somewhere" behaviour — it only changed <em>where</em>.</strong> With VGG the sink was 8PSK; with ResNet it's OOK (BPSK→OOK 273, 16QAM→OOK 257, GMSK→OOK 254, 8PSK→OOK 240, FM→OOK 214…). The garbage-can is not a quirk of one model — it's what any of these networks do when noise has destroyed a signal and they are still forced to pick a class. The <em>gate</em> is the real fix, and it works just as well on ResNet (69.8% answered at 90% accuracy). QPSK ⇄ 256QAM persists too (839 errors vs VGG's 922).</p>
+    <div class="callout">
+      <p><strong>The fair comparison to the paper.</strong> Our 66–67% is an average over the <em>whole</em> SNR range, dragging in hopeless −20&nbsp;dB signals; the paper's 98–99.8% is the <em>peak</em>, measured only on clean, high-SNR signals. Scored the paper's way — on signals at ≥&nbsp;+18&nbsp;dB — both our models jump to ~94%. On clean signals the architecture barely matters; ResNet's whole edge lives in the noisy middle.</p>
+    </div>
+    <div class="tbl-wrap"><table>
+      <tr><th>Model</th><th class="num">All-SNR avg</th><th class="num">High-SNR ≥18 dB</th><th class="num">Cleanest 30 dB</th><th class="num">Gate: answered @ 90%</th></tr>
+      <tr><td>VGG</td><td class="num">66.3%</td><td class="num">93.9%</td><td class="num">93.8%</td><td class="num">68.0%</td></tr>
+      <tr><td>ResNet</td><td class="num">67.5%</td><td class="num">94.1%</td><td class="num">93.4%</td><td class="num">69.8%</td></tr>
+      <tr><td>Paper (24 classes)</td><td class="num">—</td><td class="num">~98.3 / 99.8%</td><td class="num">—</td><td class="num">—</td></tr>
+    </table></div>
+    <p class="fig-sub" style="margin-top:0.2rem">Reproduce with <code>.venv/bin/python scripts/high_snr.py</code> (scores both models on the clean, high-SNR slice).</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">09 · Against the paper</p>
     <h2>What we replicated, and what's still open</h2>
     <div class="tbl-wrap"><table>
       <tr><th>Paper element</th><th>Status</th></tr>
       <tr><td>Raw I/Q input, no expert features</td><td>replicated</td></tr>
       <tr><td>VGG CNN layout (Table III)</td><td>replicated — output head 3 or 10 wide</td></tr>
-      <tr><td>ResNet layout (Table IV)</td><td>replicated (3-class head-to-head)</td></tr>
+      <tr><td>ResNet layout (Table IV)</td><td>replicated — VGG and ResNet on all 10 classes</td></tr>
       <tr><td>Training recipe (Adam, cross-entropy, early stop)</td><td>replicated</td></tr>
       <tr><td>Accuracy-as-a-curve vs SNR</td><td>reproduced from ground-truth SNR</td></tr>
-      <tr><td>High-SNR accuracy ~98–99.8%</td><td>matched shape (~94% at high SNR on 10-class)</td></tr>
+      <tr><td>High-SNR accuracy ~98–99.8%</td><td>matched shape (~94% at high SNR, both models)</td></tr>
       <tr><td>Multi-class confusion structure</td><td>reproduced (ladders + garbage-can sink)</td></tr>
       <tr><td>Selective classification (abstain)</td><td>added — 68% coverage at 90% accuracy</td></tr>
       <tr><td>XGBoost baseline</td><td>studied only, not built</td></tr>
@@ -406,12 +429,12 @@
   </section>
 
   <section>
-    <p class="eyebrow">09 · Next</p>
+    <p class="eyebrow">10 · Next</p>
     <h2>Open threads</h2>
     <ul class="tight">
-      <li><strong>ResNet on 10 classes</strong> — does the skip-connection model handle the confusable ladders any better, or build the same 8PSK sink?</li>
       <li><strong>All 24 modulations</strong> — the full paper replication; the pipeline already scales, chance drops to ~4%.</li>
       <li><strong>The harder trio</strong> — BPSK / QPSK / 8PSK alone, a focused test of whether the network learns phase structure.</li>
+      <li><strong>Why the garbage-can moves</strong> — 8PSK for VGG, OOK for ResNet: what makes a given class the default "when unsure" sink for a given architecture?</li>
     </ul>
   </section>
 

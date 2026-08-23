@@ -109,16 +109,49 @@ filters by signal quality rather than guessing:
 
 ![Accuracy vs true SNR](../../results/accuracy_vs_snr_vgg.png)
 
+## VGG vs ResNet on the 10 classes
+
+We also trained the paper's **ResNet** (skip connections) on the same 10 classes. The
+average barely moved — **67.5%** vs VGG's 66.3%, just **+1.2%** — the same tiny gain
+we saw on the 3-class warm-up. Noise is the ceiling, not the architecture. But the
+confusion matrix is more interesting than the average:
+
+![ResNet 10-class confusion matrix](../../results/confusion_matrix_resnet.png)
+
+**The garbage-can moved.** VGG dumped its noisy junk into **8PSK** (precision 0.335).
+ResNet *fixes* 8PSK (precision → 0.608) — but the junk didn't vanish, it relocated to
+**OOK** (precision 0.402, recall 0.791; BPSK→OOK 273, 16QAM→OOK 257, GMSK→OOK 254…). A
+different architecture didn't remove the "dump the unclassifiable signal somewhere"
+behaviour — it only changed *where*. The garbage-can is what any of these networks do
+when noise has destroyed a signal and they must still pick a class; the **gate** is the
+real fix (ResNet gates to 69.8% answered @ 90%). QPSK ⇄ 256QAM persists too (839 errors
+vs VGG's 922).
+
+### The fair comparison to the paper (high-SNR score)
+
+Our 66–67% is an average over the *whole* SNR range, dragging in hopeless −20 dB signals
+no classifier could win. The paper's 98–99.8% is the *peak* — measured only on clean,
+high-SNR signals. Scored the paper's way, both our small CPU models jump to ~94%:
+
+| Model | All-SNR avg | High-SNR (≥ +18 dB) | Cleanest (+30 dB) | Gate: answered @ 90% |
+|---|---|---|---|---|
+| VGG | 66.3% | **93.9%** | 93.8% | 68.0% |
+| ResNet | 67.5% | **94.1%** | 93.4% | 69.8% |
+| Paper (24 classes) | — | ~98.3% / 99.8% | — | — |
+
+On clean signals the architecture barely matters (VGG and ResNet tie at ~94%); ResNet's
+whole edge lives in the noisy middle. Reproduce with `scripts/high_snr.py`.
+
 ## Against the paper
 
 | Paper element | Status |
 |---|---|
 | Raw I/Q input, no expert features | replicated |
 | VGG CNN layout (Table III) | replicated layer-for-layer (output head 3 or 10 wide) |
-| ResNet layout (Table IV) | replicated with functional API (3-class) |
+| ResNet layout (Table IV) | replicated — VGG and ResNet on all 10 classes (67.5%) |
 | Training recipe (Adam, cross-entropy, early stop) | replicated |
 | Accuracy-as-a-curve vs SNR | reproduced from ground-truth SNR (S-curve, `gate.py`) |
-| High-SNR accuracy ~98.3% (VGG), 99.8% (ResNet) | matched shape (~94% at high SNR on 10-class) |
+| High-SNR accuracy ~98.3% (VGG), 99.8% (ResNet) | matched shape (~94% at high SNR, both models — `high_snr.py`) |
 | Multi-class confusion structure | reproduced (10-class ladders + garbage-can sink) |
 | Selective classification (abstain option) | added — 68% coverage at 90% accuracy |
 | XGBoost baseline | studied only, not built |
@@ -134,10 +167,12 @@ The class list and per-class count are already set for the 10-class run at the t
 .venv/bin/python scripts/train.py       # train VGG, ~15 min on CPU (10 classes)
 .venv/bin/python scripts/evaluate.py    # metrics + confusion matrix
 .venv/bin/python scripts/gate.py        # refuse-to-answer gate + SNR curves
+.venv/bin/python scripts/high_snr.py    # both models scored on the clean, high-SNR slice
 ```
 
-Add `--model resnet` to train/evaluate/gate to use the residual network instead, or
-`--target-accuracy 0.95` to `gate.py` for a stricter gate.
+Add `--model resnet` to train/evaluate/gate to use the residual network instead (the
+same commands produced the ResNet numbers above), or `--target-accuracy 0.95` to
+`gate.py` for a stricter gate.
 
 Dataset: DeepSig RadioML 2018.01A, CC BY-NC-SA 4.0 (non-commercial, attribution
 required). The dataset and trained model are gitignored — see the repo root

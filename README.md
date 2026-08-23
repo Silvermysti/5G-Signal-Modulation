@@ -89,6 +89,7 @@ scripts/
   train.py         training with early stopping + best-model checkpointing
   evaluate.py      accuracy, precision/recall, confusion matrix, confidence check
   gate.py          refuse-to-answer gate: risk-coverage + accuracy-vs-SNR curves
+  high_snr.py      scores VGG and ResNet on the clean, high-SNR slice (paper-style)
 prepared/          the sampled + split arrays produced by data_prep.py
                    (X_train/X_test/y_train/y_test.npy, snr_*.npy, classes.txt)
 models/            trained weights — vgg.keras, resnet.keras
@@ -138,13 +139,16 @@ network instead. The class list and per-class count live at the top of
 ## Architectures built
 
 - **VGG CNN** — 66.3% on 10 classes (81.1% on the easier 3-class warm-up)
-- **ResNet** — skip-connection variant; on the 3-class task it reached 82.1% vs
-  VGG's 81.1%. Only ~1% better, because the bottleneck is data quality (noise),
-  not the model — both hit the same ceiling.
+- **ResNet** — skip-connection variant; **67.5% on the same 10 classes** (and 82.1%
+  vs 81.1% on the 3-class task). Only ~1% better, because the bottleneck is data
+  quality (noise), not the model — both hit the same ceiling.
 
-The paper achieves 98.3% (VGG) and 99.8% (ResNet) at high SNR on all 24 classes.
-The lesson we reproduced: **architecture matters less than signal quality.** A
-cleverer network cannot recover information that noise destroyed before capture.
+Scored the way the paper reports — on **clean, high-SNR signals only** (≥ +18 dB) —
+both models reach **~94%** (`scripts/high_snr.py`). Our headline 66–67% looks far
+below the paper's 98.3% / 99.8% only because it averages in the hopeless sub-0 dB
+signals the paper excludes from its peak number. The lesson we reproduced:
+**architecture matters less than signal quality.** A cleverer network cannot recover
+information that noise destroyed before capture — on clean signals VGG and ResNet tie.
 
 ## Not built (yet)
 

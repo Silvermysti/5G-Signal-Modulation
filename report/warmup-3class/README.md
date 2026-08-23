@@ -66,7 +66,7 @@ Skip connections make training easier by letting each layer learn a small adjust
 instead of a full transformation, but they cannot recover information noise already
 destroyed. Both models hit the same ceiling.
 
-![ResNet 3-class confusion matrix](../../results/confusion_matrix_resnet.png)
+![ResNet 3-class confusion matrix](../../results/confusion_matrix_resnet_3class.png)
 
 | Class | Precision | Recall | F1 |
 |---|---|---|---|
