@@ -16,11 +16,19 @@ The signals file is ~19.5 GB, so we must NOT load it all into memory. Instead we
 Run it with:   .venv/bin/python scripts/data_prep.py
 """
 
+import argparse
 import ast
 from pathlib import Path
 
 import numpy as np
 from sklearn.model_selection import train_test_split
+
+parser = argparse.ArgumentParser(description="Sample a balanced subset of RadioML.")
+parser.add_argument("--per-class", type=int, default=None,
+                    help="examples per class (overrides PER_CLASS below)")
+parser.add_argument("--all-24", action="store_true",
+                    help="use every class in the dataset, not just CHOSEN_CLASSES")
+args = parser.parse_args()
 
 # ----------------------------------------------------------------------------
 # Settings you can tweak
@@ -42,6 +50,9 @@ CHOSEN_CLASSES = [
 PER_CLASS = 8000                          # how many examples of each
 TEST_FRACTION = 0.2                       # 20% held out for honest testing
 SEED = 42                                 # fixed randomness => reproducible runs
+
+if args.per_class is not None:            # let the command line win
+    PER_CLASS = args.per_class
 
 # Folder layout (this file lives in scripts/, data is in ../Data)
 HERE = Path(__file__).resolve().parent
@@ -65,6 +76,10 @@ text = (DATA_DIR / "classes.txt").read_text()
 bracketed = text[text.index("["): text.rindex("]") + 1]  # just the [...] part
 ALL_CLASSES = ast.literal_eval(bracketed)                 # safely parse to a list
 print(f"Dataset has {len(ALL_CLASSES)} classes total.")
+
+if args.all_24:                           # full paper replication: every class
+    CHOSEN_CLASSES = list(ALL_CLASSES)
+    print(f"--all-24: using all {len(CHOSEN_CLASSES)} classes.")
 
 # Which COLUMN in the one-hot labels does each chosen class live in?
 chosen_cols = [ALL_CLASSES.index(name) for name in CHOSEN_CLASSES]
