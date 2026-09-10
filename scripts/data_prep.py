@@ -113,53 +113,53 @@ picked_rows = picked_rows[order]
 picked_y = picked_y[order]
 
 # ----------------------------------------------------------------------------
-# 3. Memory-map the big signals file and read ONLY our rows
+# 3. Decide which rows go to train vs test BEFORE touching the big signals
+#    file. picked_rows/picked_y are just small arrays of row-numbers and
+#    labels (cheap), so splitting them first means we never have to hold the
+#    combined train+test signal data in RAM at once -- only two SEPARATE reads
+#    (train, then test), each sized for what it actually needs. At large
+#    sample sizes, gathering everything into one array first and then
+#    splitting would briefly need memory for all three copies (full + train +
+#    test) at once -- easily more RAM than a laptop has.
 # ----------------------------------------------------------------------------
+idx = np.arange(len(picked_rows))
+train_idx, test_idx = train_test_split(
+    idx, test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
+)
+train_rows, test_rows = picked_rows[train_idx], picked_rows[test_idx]
+y_train, y_test = picked_y[train_idx], picked_y[test_idx]
+
 signals_mm = np.load(DATA_DIR / "signals.npy", mmap_mode="r")  # no data loaded yet
 print("Signals memmap:", signals_mm.shape, signals_mm.dtype)
 
-# Fancy-indexing a memmap reads just those rows from disk into a real array.
-X = np.asarray(signals_mm[picked_rows], dtype=np.float32)      # shape (80000, 1024, 2)
-print("Gathered signal subset into RAM:", X.shape,
-      f"({X.nbytes / 1e6:.0f} MB)")
-
-# Gather the matching SNR for each picked row (same order as X), if available.
-# snrs.npy is (N, 1); we flatten to a plain 1-D array of one number per example.
-picked_snr = None
-if SNR_PATH.exists():
-    snrs_mm = np.load(SNR_PATH, mmap_mode="r")
-    picked_snr = np.asarray(snrs_mm[picked_rows], dtype=np.float32).reshape(-1)
-    print(f"Gathered ground-truth SNR: {picked_snr.shape[0]} values, "
-          f"range {picked_snr.min():.0f}..{picked_snr.max():.0f} dB")
-else:
+snrs_mm = np.load(SNR_PATH, mmap_mode="r") if SNR_PATH.exists() else None
+if snrs_mm is None:
     print(f"(No SNR file at {SNR_PATH} -- skipping SNR, everything else still works.)")
 
-# ----------------------------------------------------------------------------
-# 4. Normalize each snippet to unit variance (the paper's recipe)
-#    Each example is scaled on its own so loudness/volume doesn't matter,
-#    only the *shape* of the signal does.
-# ----------------------------------------------------------------------------
-per_example_std = X.std(axis=(1, 2), keepdims=True)   # one std per snippet
-per_example_std[per_example_std == 0] = 1.0           # avoid divide-by-zero
-X = X / per_example_std
 
-# ----------------------------------------------------------------------------
-# 5. Train / test split (stratify keeps the classes balanced in both halves)
-#    The split depends only on the seed, test_size and stratify labels, so it is
-#    identical whether or not we also hand it the SNR array -- adding SNR does
-#    NOT change which rows land in X_test. That keeps an already-trained model
-#    valid after a re-run.
-# ----------------------------------------------------------------------------
-if picked_snr is not None:
-    X_train, X_test, y_train, y_test, snr_train, snr_test = train_test_split(
-        X, picked_y, picked_snr,
-        test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
-    )
-else:
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, picked_y, test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
-    )
-    snr_train = snr_test = None
+def gather(rows, name):
+    """Read this split's rows off disk, normalize, and grab matching SNR."""
+    # Fancy-indexing a memmap reads just those rows from disk into a real array.
+    x = np.asarray(signals_mm[rows], dtype=np.float32)
+    print(f"Gathered {name} signals: {x.shape}  ({x.nbytes / 1e6:.0f} MB)")
+
+    # 4. Normalize each snippet to unit variance (the paper's recipe). Each
+    #    example is scaled on its own so loudness/volume doesn't matter, only
+    #    the *shape* of the signal does.
+    per_example_std = x.std(axis=(1, 2), keepdims=True)
+    per_example_std[per_example_std == 0] = 1.0   # avoid divide-by-zero
+    x /= per_example_std
+
+    # snrs_mm[rows] is already in the same row order as x (both indexed by `rows`).
+    snr = np.asarray(snrs_mm[rows], dtype=np.float32).reshape(-1) if snrs_mm is not None else None
+    return x, snr
+
+
+X_train, snr_train = gather(train_rows, "train")
+X_test, snr_test = gather(test_rows, "test")
+if snr_train is not None:
+    print(f"Ground-truth SNR range: {min(snr_train.min(), snr_test.min()):.0f}.."
+          f"{max(snr_train.max(), snr_test.max()):.0f} dB")
 print(f"Train set: {X_train.shape[0]} examples | Test set: {X_test.shape[0]} examples")
 
 # Save everything for the train/evaluate scripts to load.
