@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*, *::before, *::after { box-sizing: border-box; }</style>
+<title>24-Modulation Full Replication — Project Report</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --accent: #2a78d6;
+    --accent-ink: #1c5cab;
+    --series-2: #008300;
+    --wash: rgba(42, 120, 214, 0.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5;
+      --accent-ink: #86b6ef;
+      --series-2: #00a300;
+      --wash: rgba(57, 135, 229, 0.10);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --accent-ink: #86b6ef;
+    --series-2: #00a300;
+    --wash: rgba(57, 135, 229, 0.10);
+  }
+
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 3.5rem 1.25rem 5rem;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: 3.25rem; }
+  section { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+    line-height: 1.15;
+    margin: 0.35rem 0 0;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  h2 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  h3 { font-size: 1rem; margin: 0.4rem 0 0; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--ink-2); font-size: 1.05rem; max-width: 60ch; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem; color: var(--muted); margin-top: 0.8rem;
+  }
+  a { color: var(--accent-ink); text-underline-offset: 3px; }
+  a:focus-visible, [data-tip]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.75rem; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.9rem 1rem 0.8rem; display: flex; flex-direction: column; gap: 0.15rem;
+  }
+  .tile .k {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  }
+  .tile .v { font-size: 1.65rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+  .tile .s { font-size: 0.78rem; color: var(--ink-2); }
+
+  /* figures */
+  figure {
+    margin: 0.4rem 0 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.1rem 1.1rem 0.9rem; overflow-x: auto;
+  }
+  figcaption { font-size: 0.8rem; color: var(--muted); margin-top: 0.55rem; max-width: 60ch; }
+  .fig-title { font-size: 0.85rem; font-weight: 600; margin: 0 0 0.15rem; }
+  .fig-sub { font-size: 0.78rem; color: var(--ink-2); margin: 0 0 0.7rem; }
+  img.fig { display: block; max-width: 100%; height: auto; border-radius: 4px; }
+
+  /* pipeline */
+  ol.steps { list-style: none; margin: 0.3rem 0 0; padding: 0; display: flex; flex-direction: column; }
+  ol.steps li {
+    display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.9rem;
+    padding: 0.8rem 0; border-top: 1px solid var(--grid);
+  }
+  ol.steps li:last-child { border-bottom: 1px solid var(--grid); }
+  ol.steps .n {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--accent-ink); font-size: 0.8rem; padding-top: 0.15rem;
+  }
+  ol.steps .t { font-weight: 600; }
+  ol.steps .d { font-size: 0.88rem; color: var(--ink-2); max-width: 58ch; }
+  ol.steps code, td code, p code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85em; background: var(--wash); border-radius: 3px; padding: 0.05em 0.35em;
+  }
+
+  /* tables */
+  .tbl-wrap { overflow-x: auto; margin-top: 0.4rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 0.45rem 0.9rem 0.45rem 0; border-bottom: 1px solid var(--grid); }
+  th {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td:last-child, th:last-child { padding-right: 0; }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--wash);
+    border-radius: 0 6px 6px 0; padding: 0.85rem 1.1rem; max-width: 60ch;
+  }
+  .callout p { font-size: 0.95rem; }
+  .callout.warn { border-left-color: #c9962a; background: rgba(201, 150, 42, 0.08); }
+
+  ul.tight { margin: 0.2rem 0 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.45rem; }
+  ul.tight li { max-width: 60ch; }
+  ul.tight li::marker { color: var(--accent-ink); }
+
+  footer { border-top: 1px solid var(--grid); padding-top: 1.2rem; font-size: 0.78rem; color: var(--muted); }
+  footer p { max-width: 100%; }
+
+  /* tooltip */
+  #tip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--ink); color: var(--plane);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.72rem; line-height: 1.45; padding: 0.4rem 0.6rem; border-radius: 5px;
+    max-width: 16rem; white-space: pre-line;
+  }
+  [data-tip] { cursor: default; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Project report · RadioML 2018.01A · Phase 3</p>
+    <h1>The full replication: all 24 modulations, and where architecture finally matters</h1>
+    <p class="lede">Phases 1–2 kept finding that VGG and ResNet land within ~1% of each other. Scaling to the <strong>full 24-class problem</strong> — trained on a free Colab GPU — breaks that pattern: ResNet pulls <strong>9.2 points ahead</strong>, and VGG <strong>completely fails to learn four classes</strong> it never once predicts.</p>
+    <div class="meta">
+      <span>2026-09-11</span>
+      <span>Silvermysti/5G-Signal-Modulation</span>
+      <span>TensorFlow · Keras · Colab T4 GPU</span>
+    </div>
+    <div class="callout" style="margin-top: 1rem;">
+      <p><strong>Phase 3 of 3.</strong> The 3-class warm-up (81.1%) is in the <a href="../warmup-3class/report.html">warm-up report</a>; the 10-class run + refuse-to-answer gate (66.3% → 90% gated) is in the <a href="../scaleup-10class/report.html">scale-up report</a>.</p>
+    </div>
+  </header>
+
+  <section>
+    <div class="tiles">
+      <div class="tile">
+        <span class="k">VGG, all SNR</span>
+        <span class="v">39.5%</span>
+        <span class="s">96,000 held-out · chance = 4.2%</span>
+      </div>
+      <div class="tile">
+        <span class="k">ResNet, all SNR</span>
+        <span class="v">48.7%</span>
+        <span class="s">+9.2 points over VGG</span>
+      </div>
+      <div class="tile">
+        <span class="k">VGG classes learned</span>
+        <span class="v">20 / 24</span>
+        <span class="s">4 classes: zero recall, ever</span>
+      </div>
+      <div class="tile">
+        <span class="k">ResNet classes learned</span>
+        <span class="v">24 / 24</span>
+        <span class="s">worst still gets 11.7% recall</span>
+      </div>
+    </div>
+    <div class="callout">
+      <p><strong>The headline finding:</strong> at 10 classes, architecture barely mattered — the ceiling was noise, and VGG/ResNet tied. At <strong>24 classes</strong>, that stops being true. Four of the hardest classes (very dense, look-alike constellations) are ones VGG's plain conv stack simply never learns to predict — <em>not once</em>, across 16,000 test examples. ResNet's skip connections, which mainly make optimization easier rather than adding raw capacity, are the difference between "learns" and "gives up."</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">01 · The task</p>
+    <h2>All 24 classes — the full paper replication</h2>
+    <p>Every modulation DeepSig's RadioML 2018.01A ships: the PSK, APSK, QAM, and ASK families at every order the dataset has, plus the analog AM/FM/GMSK/OOK set from Phases 1–2. Chance accuracy drops to <strong>1-in-24 (4.2%)</strong>. Trained on <strong>20,000 examples/class (480,000 total)</strong> — chosen to fit a ~25-minute budget on a free Colab GPU.</p>
+    <p>The laptop's 12-core CPU that handled Phases 1–2 would take hours here, so this phase moved to a <strong>free Colab T4 GPU</strong>, run through a notebook (<code>colab/train_24class.ipynb</code>) rather than the laptop.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">02 · Results</p>
+    <h2>VGG collapses on four classes; ResNet doesn't</h2>
+    <p><code>64APSK</code>, <code>128QAM</code>, <code>128APSK</code>, and <code>AM-DSB-SC</code> all score <strong>precision = 0.000, recall = 0.000</strong> under VGG — the model never predicts any of them, for any of their 4,000 test examples each. Under ResNet, every one of the 24 classes gets learned to some degree; the weakest (<code>128APSK</code>) still reaches 11.7% recall.</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>Metric</th><th class="num">VGG</th><th class="num">ResNet</th></tr>
+      <tr><td>All-SNR test accuracy</td><td class="num">39.5%</td><td class="num"><strong>48.7%</strong></td></tr>
+      <tr><td>High-SNR (≥ +18 dB, paper-style)</td><td class="num">57.9%</td><td class="num"><strong>75.8%</strong></td></tr>
+      <tr><td>Classes with zero recall</td><td class="num">4 of 24</td><td class="num"><strong>0 of 24</strong></td></tr>
+      <tr><td>Confidence when correct / wrong</td><td class="num">0.743 / 0.246</td><td class="num">0.811 / 0.269</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <p class="eyebrow">03 · The garbage-can effect, concentrated</p>
+    <h2>Where do the four collapsed classes' predictions go?</h2>
+    <p>Overwhelmingly into three other classes, which absorb far more predictions than their true share:</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>Sink class</th><th class="num">Times predicted</th><th class="num">True count</th><th class="num">Over-prediction</th></tr>
+      <tr><td><code>8ASK</code></td><td class="num">14,938</td><td class="num">4,000</td><td class="num">3.7×</td></tr>
+      <tr><td><code>AM-SSB-SC</code></td><td class="num">11,061</td><td class="num">4,000</td><td class="num">2.8×</td></tr>
+      <tr><td><code>16PSK</code></td><td class="num">10,413</td><td class="num">4,000</td><td class="num">2.6×</td></tr>
+    </table></div>
+    <p>Together these three classes absorb <strong>38% of all VGG's predictions (36,412 of 96,000)</strong> despite being only 12.5% of the true examples. This is the same behaviour found in Phase 2 — where 8PSK alone absorbed noise-destroyed signals — except here it's driven by four genuinely hard-to-separate classes rather than noise, so the "garbage can" spreads across a small cluster instead of one sink.</p>
+    <div class="callout">
+      <p><strong>Why these four:</strong> <code>64APSK</code>, <code>128QAM</code>, and <code>128APSK</code> are extremely dense, high-order constellations — visually near-identical to each other and their neighbours, even without noise. <code>AM-DSB-SC</code> differs from Phase 2's easy anchor <code>AM-DSB-WC</code> only in whether the carrier is suppressed — a subtle distinction. These are the hardest pairwise confusions in the whole set, and VGG's plain feed-forward stack ran out of training budget before separating them. ResNet's skip connections — which mainly ease <em>optimization</em>, per the original ResNet paper, not raw capacity — turn that into "learns vs. doesn't."</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">04 · Confusion matrices</p>
+    <h2>VGG's solid-zero rows, ResNet's weak-but-present diagonal</h2>
+    <figure>
+      <p class="fig-title">VGG — 24-class confusion matrix</p>
+      <p class="fig-sub">Note the four rows with no diagonal entry, and the wide 8ASK / AM-SSB-SC / 16PSK columns</p>
+      <img class="fig" src="../../results/confusion_matrix_vgg.png" alt="24 by 24 confusion matrix for VGG. Four rows (64APSK, 128QAM, 128APSK, AM-DSB-SC) have zero on the diagonal — every example from these classes is misclassified. Three columns (8ASK, AM-SSB-SC, 16PSK) are bright vertical stripes absorbing errors from many other classes.">
+      <figcaption>VGG, all 24 classes. Four collapsed classes; three columns act as a shared garbage-can sink.</figcaption>
+    </figure>
+    <figure>
+      <p class="fig-title">ResNet — 24-class confusion matrix</p>
+      <p class="fig-sub">Same four hard classes are still the weakest, but each keeps a real diagonal</p>
+      <img class="fig" src="../../results/confusion_matrix_resnet.png" alt="24 by 24 confusion matrix for ResNet. All 24 classes have a nonzero diagonal, though the same four hard classes (64APSK, 128QAM, 128APSK, AM-DSB-SC) remain the weakest.">
+      <figcaption>ResNet, all 24 classes. No collapsed classes — the hardest four are weak but nonzero.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <p class="eyebrow">05 · Against the paper</p>
+    <h2>An honest gap — and why it's expected</h2>
+    <div class="tbl-wrap"><table>
+      <tr><th>Paper element</th><th>Status</th></tr>
+      <tr><td>All 24 classes (full replication)</td><td>done — VGG 39.5% / ResNet 48.7% all-SNR</td></tr>
+      <tr><td>High-SNR accuracy ~98.3% (VGG) / 99.8% (ResNet)</td><td>not matched — 57.9% / 75.8%</td></tr>
+      <tr><td>Multi-class confusion structure</td><td>reproduced + extended (collapsed-class sink)</td></tr>
+      <tr><td>ResNet's real value over VGG</td><td>reproduced and <strong>strengthened</strong> at higher class count</td></tr>
+    </table></div>
+    <div class="callout warn">
+      <p><strong>Why we don't match the paper's high-SNR number here</strong> — unlike Phase 2, where the 10-class high-SNR score nearly matched: the paper trains on ~106,000 examples/class; this ran on <strong>20,000/class</strong> (a ~25-minute Colab budget). With 24 genuinely confusable classes, several needing fine detail to separate, that's not enough data to fully resolve the hardest ones. This is an honest, expected limitation, not a bug — more data and a longer budget would likely close much of the gap, extending the project's running theme: <strong>architecture matters less than data quality/quantity</strong> — except now <em>quantity</em> joins <em>noise</em> as a real constraint.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">06 · Next</p>
+    <h2>Open threads</h2>
+    <ul class="tight">
+      <li><strong>More data per class</strong> — closer to the paper's ~106k/class, to see how much of the gap on the four hardest classes closes.</li>
+      <li><strong>A refuse-to-answer gate for 24 classes</strong> — <code>gate.py</code> already generalizes; the collapsed-class problem may show up as low confidence rather than confident wrong answers.</li>
+      <li><strong>Why these specific four</strong> — a closer look at whether it's constellation density, training-order effects, or something else that makes VGG give up on exactly these classes.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Dataset: DeepSig RadioML 2018.01A (CC BY-NC-SA 4.0 — non-commercial, attribution required). Reference: T. O'Shea, T. Roy, T. C. Clancy, "Over the Air Deep Learning Based Radio Signal Classification," IEEE J-STSP, 2018. Code: <a href="https://github.com/Silvermysti/5G-Signal-Modulation">github.com/Silvermysti/5G-Signal-Modulation</a> (private).</p>
+  </footer>
+
+</div>
+
+<div id="tip" role="status"></div>
+
+<script>
+  (function () {
+    var tip = document.getElementById('tip');
+    function show(e) {
+      var t = e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.display = 'block';
+      var x = e.clientX + 14, y = e.clientY + 14;
+      var r = tip.getBoundingClientRect();
+      if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - 10;
+      if (y + r.height > window.innerHeight - 8) y = e.clientY - r.height - 10;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    }
+    document.addEventListener('mousemove', show);
+    document.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  })();
+</script>
+</body>
+</html>

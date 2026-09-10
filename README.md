@@ -2,38 +2,42 @@
 
 Given a raw 1024-sample I/Q radio snippet, which modulation scheme produced it?
 
-This is a scaled-down replication of the VGG-style convolutional network from
-O'Shea, Roy & Clancy, *[Over the Air Deep Learning Based Radio Signal
+This is a replication of the VGG-style convolutional network (and its ResNet
+variant) from O'Shea, Roy & Clancy, *[Over the Air Deep Learning Based Radio Signal
 Classification](https://arxiv.org/abs/1712.04578)* (IEEE J-STSP, 2018), built as a
-hands-on way to learn deep learning. The paper classifies 24 modulations using
-2.55M examples on a V100 GPU; this trains on **10 modulations** and **80,000
-examples** in about fifteen minutes on a CPU laptop. (It began as an easier
-**3-class** warm-up — OOK/QPSK/FM at 81.1% — kept below as context.)
+hands-on way to learn deep learning. It grew in three phases: a **3-class** warm-up
+on a laptop CPU (81.1%), a **10-class** scale-up with a refuse-to-answer gate
+(66.3% → 90% gated), and the **full 24-class replication** on a free Colab GPU —
+the paper's actual scope.
 
 | | |
 |---|---|
-| **Test accuracy (10 classes)** | **66.3%** on 16,000 held-out examples (chance = 10%) |
-| **With a "refuse to answer" gate** | **90% accurate while still answering 68%** of signals |
-| **Trustworthy anchors** | FM, AM, OOK, 16QAM, 64QAM all score **>96% precision** |
+| **Full replication (24 classes)** | VGG **39.5%** / ResNet **48.7%** on 96,000 held-out (chance = 4.2%) |
+| **ResNet finally pulls ahead** | +9.2 points over VGG — and learns all 24 classes; VGG **never predicts 4 of them** |
+| **10-class + gate** | **66.3%** → **90% accurate while answering 68%** of signals |
 | **Warm-up (3 classes)** | **81.1%** — 99.4% on clean signals, ~42% on the noisiest third |
-| **Model** | VGG-style 1D CNN, 159,818 parameters |
-| **Hardware** | 12 CPU cores, no GPU |
+| **Models** | VGG-style 1D CNN (159,818–168,216 params) and its ResNet variant |
+| **Hardware** | 12-core CPU (Phases 1–2) → free Colab T4 GPU (Phase 3) |
 
-The 66% average hides *structure*. The network is near-perfect on physically
-distinct modulations and vague only on look-alike families — and when noise
-destroys a signal it funnels the junk into one "garbage-can" class (8PSK) rather
-than spreading the error around. Reading that pattern out of the confusion matrix
-is the most interesting part of the project — see the
-[full report](report/README.md).
+At 10 classes, architecture barely mattered — VGG and ResNet tied, because noise was
+the ceiling. At the **full 24 classes**, that breaks: VGG completely gives up on four
+hard, look-alike classes (`64APSK`, `128QAM`, `128APSK`, `AM-DSB-SC` — precision *and*
+recall of 0.000, never once predicted), dumping their errors into three other classes.
+ResNet learns all 24. That shift — from "architecture is a minor detail" to
+"architecture is the difference between learning a class or not" — is the project's
+biggest finding. Full story in the [reports](report/README.md).
 
-![Confusion matrix](results/confusion_matrix_vgg.png)
+![24-class confusion matrix, VGG](results/confusion_matrix_vgg.png)
 
-## The ten classes
+## The class sets
 
-Chosen to span the major modulation families, with two deliberately *confusable*
-"ladders" so the confusion matrix shows real structure, plus distinct anchors that
-stay easy to tell apart. QPSK / 16 / 64 / 256QAM are the workhorses of real 5G
-data channels.
+Three runs, growing scope: an easy **3-class** warm-up, a curated **10-class** set
+chosen to span the major families, then the dataset's **full 24 classes** for the
+real replication. The 24-class list is in the
+[full replication report](report/full-24class/README.md); the curated 10 (still the
+set `gate.py`'s refuse-to-answer demo uses) were chosen with two deliberately
+*confusable* "ladders" so the confusion matrix shows real structure, plus distinct
+anchors that stay easy to tell apart:
 
 | Class | Family | Role |
 |---|---|---|
@@ -48,6 +52,9 @@ Following the paper's central thesis, the network sees **raw I/Q samples only** 
 no Fourier transform, no hand-crafted features. It learns its own.
 
 ## Knowing when not to answer
+
+*(From the 10-class phase — the refuse-to-answer gate hasn't been extended to the
+full 24-class run yet; see [Next](report/full-24class/README.md#next).)*
 
 Forcing a guess on a signal that noise has already destroyed is a mistake. The
 model reports how confident it is, so `scripts/gate.py` lets it **abstain** when
@@ -70,33 +77,37 @@ Input  1024 x 2  (I/Q)
 Flatten                                                          512
 Dense(128, SELU) -> AlphaDropout
 Dense(128, SELU) -> AlphaDropout
-Dense(10, Softmax)
+Dense(N, Softmax)          # N = 3, 10, or 24 depending on the phase
 ```
 
-Layer-for-layer the paper's Table III, with the output head narrowed from 24
-classes to 10. Trained with Adam and cross-entropy, stopping when validation loss
-stops improving — the paper's stated recipe. Only the final layer's width changes
-with the number of classes; the script sizes it automatically.
+Layer-for-layer the paper's Table III. Trained with Adam and cross-entropy, stopping
+when validation loss stops improving — the paper's stated recipe. Only the final
+layer's width changes with the number of classes; the script sizes it automatically
+from `classes.txt`, so the same code trained all three phases.
 
 ## Repository layout
 
 ```
 scripts/
-  data_prep.py     memory-maps the 19.5 GB dataset, pulls 8,000 examples per
-                   class, normalizes to unit variance, 80/20 stratified split
+  data_prep.py     memory-maps the 19.5 GB dataset, samples N examples per class
+                   (--all-24 / --per-class), normalizes, 80/20 stratified split
   model.py         the VGG CNN (run directly to print the architecture)
   resnet_model.py  the ResNet variant with skip connections
   train.py         training with early stopping + best-model checkpointing
   evaluate.py      accuracy, precision/recall, confusion matrix, confidence check
   gate.py          refuse-to-answer gate: risk-coverage + accuracy-vs-SNR curves
   high_snr.py      scores VGG and ResNet on the clean, high-SNR slice (paper-style)
+  colab_pipeline.py  trains + evaluates both models back-to-back (used on the GPU)
+colab/
+  train_24class.ipynb  notebook that runs the pipeline on a free Colab GPU
 prepared/          the sampled + split arrays produced by data_prep.py
                    (X_train/X_test/y_train/y_test.npy, snr_*.npy, classes.txt)
 models/            trained weights — vgg.keras, resnet.keras
 report/            write-ups, one folder per phase (interactive HTML + markdown)
-  README.md          index linking both phase reports
+  README.md          index linking all three phase reports
   warmup-3class/     Phase 1 — the 3-class warm-up (81.1%)
   scaleup-10class/   Phase 2 — 10 classes + refuse-to-answer gate
+  full-24class/      Phase 3 — the full 24-class replication (Colab GPU)
 results/           generated figures
 Data/              the raw RadioML dataset (gitignored — see Setup)
 ```
@@ -125,6 +136,7 @@ the rows it needs.
 
 ## Running
 
+10-class, on a CPU laptop (~15 min/model):
 ```bash
 .venv/bin/python scripts/data_prep.py   # ~20 seconds (pulls 80,000 examples)
 .venv/bin/python scripts/train.py       # ~15 minutes on CPU (10 classes)
@@ -132,23 +144,29 @@ the rows it needs.
 .venv/bin/python scripts/gate.py        # refuse-to-answer gate + SNR curves
 ```
 
+Full 24-class, best done on a GPU (~25 min for both models):
+```bash
+.venv/bin/python scripts/data_prep.py --all-24 --per-class 20000   # ~480k examples
+# then open colab/train_24class.ipynb in Colab (Runtime -> GPU), or run
+# scripts/colab_pipeline.py / train.py+evaluate.py+high_snr.py locally on a GPU
+```
+
 Add `--model resnet` to `train.py`/`evaluate.py`/`gate.py` to run the residual
-network instead. The class list and per-class count live at the top of
-`data_prep.py`; `gate.py` takes `--target-accuracy` to tune how strict it is.
+network instead. `gate.py` takes `--target-accuracy` to tune how strict it is.
 
 ## Architectures built
 
-- **VGG CNN** — 66.3% on 10 classes (81.1% on the easier 3-class warm-up)
-- **ResNet** — skip-connection variant; **67.5% on the same 10 classes** (and 82.1%
-  vs 81.1% on the 3-class task). Only ~1% better, because the bottleneck is data
-  quality (noise), not the model — both hit the same ceiling.
+**10 classes (CPU):** VGG 66.3%, ResNet 67.5% — only ~1% apart, because the
+bottleneck was data quality (noise), not the model. Scored the paper's way, on
+**clean, high-SNR signals only** (≥ +18 dB), both reach **~94%** (`scripts/high_snr.py`)
+— the 66–67% headline looks far below the paper's 98.3%/99.8% only because it
+averages in hopeless sub-0 dB signals the paper's peak number excludes.
 
-Scored the way the paper reports — on **clean, high-SNR signals only** (≥ +18 dB) —
-both models reach **~94%** (`scripts/high_snr.py`). Our headline 66–67% looks far
-below the paper's 98.3% / 99.8% only because it averages in the hopeless sub-0 dB
-signals the paper excludes from its peak number. The lesson we reproduced:
-**architecture matters less than signal quality.** A cleverer network cannot recover
-information that noise destroyed before capture — on clean signals VGG and ResNet tie.
+**All 24 classes (GPU):** VGG **39.5%**, ResNet **48.7%** — a **9.2-point** gap, and
+a qualitative one: VGG never predicts 4 of the 24 classes (precision *and* recall of
+0.000), while ResNet learns all 24. At this scale, **architecture stops being a minor
+detail.** Full breakdown, including the garbage-can effect and why these specific four
+classes collapse, in the [full replication report](report/full-24class/README.md).
 
 ## Not built (yet)
 
