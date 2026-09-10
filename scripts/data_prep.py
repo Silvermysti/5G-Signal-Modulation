@@ -126,6 +126,10 @@ idx = np.arange(len(picked_rows))
 train_idx, test_idx = train_test_split(
     idx, test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
 )
+# Re-sort each split by row-number (train_idx/test_idx themselves are in random
+# order) so the upcoming disk reads are sequential-ish again, same as before.
+train_idx = train_idx[np.argsort(picked_rows[train_idx])]
+test_idx = test_idx[np.argsort(picked_rows[test_idx])]
 train_rows, test_rows = picked_rows[train_idx], picked_rows[test_idx]
 y_train, y_test = picked_y[train_idx], picked_y[test_idx]
 
