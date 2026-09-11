@@ -5,7 +5,14 @@ spanning the major families, then add a **refuse-to-answer gate** that lets the 
 abstain on signals too noisy to classify.
 
 > **Phase 1:** the original 3-class warm-up (81.1%) is in
-> [`../warmup-3class/`](../warmup-3class/README.md).
+> [`../1-warmup-3class/`](../1-warmup-3class/README.md).
+
+> **Snapshot.** `scripts/` and `results/` in this folder are frozen exactly as they
+> were when these numbers were produced (commit `50524d0`, 7 scripts). They are
+> not the current code — the gate and high-SNR scoring were added during this phase.
+> They are here to read, not to run in place: each script resolves `Data/` and
+> `prepared/` relative to its own parent, so run the repo-root `scripts/` instead
+> (or `git show <commit>:scripts/...` for the original). Ongoing work lives there too.
 
 **Interactive report:** [`report.html`](report.html) — open it in a browser (GitHub
 shows HTML as source, so download it or use a local preview). It has the interactive
@@ -37,7 +44,7 @@ workhorses of real 5G data channels.
 
 ## Confusion matrix
 
-![VGG 10-class confusion matrix](../../results/confusion_matrix_vgg_10class.png)
+![VGG 10-class confusion matrix](results/confusion_matrix_vgg_10class.png)
 
 The 66% average hides a clear *structure* — three findings worth reading off the grid:
 
@@ -80,7 +87,7 @@ describe any threshold: **coverage** (fraction answered) and **selective accurac
 (accuracy on those). `scripts/gate.py` sweeps the threshold and picks an operating
 point.
 
-![Risk-coverage curve](../../results/risk_coverage_vgg.png)
+![Risk-coverage curve](results/risk_coverage_vgg.png)
 
 | Min confidence | Coverage | Selective accuracy |
 |---|---|---|
@@ -107,7 +114,7 @@ filters by signal quality rather than guessing:
   ~chance (10%) below −14 dB, rising through 0 dB, plateauing near 94%. This also
   confirms the blind-noise proxy from the 3-class experiment was right all along.
 
-![Accuracy vs true SNR](../../results/accuracy_vs_snr_vgg.png)
+![Accuracy vs true SNR](results/accuracy_vs_snr_vgg.png)
 
 ## VGG vs ResNet on the 10 classes
 
@@ -116,7 +123,7 @@ average barely moved — **67.5%** vs VGG's 66.3%, just **+1.2%** — the same t
 we saw on the 3-class warm-up. Noise is the ceiling, not the architecture. But the
 confusion matrix is more interesting than the average:
 
-![ResNet 10-class confusion matrix](../../results/confusion_matrix_resnet_10class.png)
+![ResNet 10-class confusion matrix](results/confusion_matrix_resnet_10class.png)
 
 **The garbage-can moved.** VGG dumped its noisy junk into **8PSK** (precision 0.335).
 ResNet *fixes* 8PSK (precision → 0.608) — but the junk didn't vanish, it relocated to

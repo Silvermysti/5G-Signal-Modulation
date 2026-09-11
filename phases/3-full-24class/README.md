@@ -4,8 +4,15 @@ The project's final stage: the complete paper replication. All **24 modulations*
 DeepSig's RadioML 2018.01A ships, trained on a free **Google Colab T4 GPU** (the
 laptop CPU that handled Phases 1–2 would take hours at this scale).
 
-> **Phase 1:** the 3-class warm-up (81.1%) is in [`../warmup-3class/`](../warmup-3class/README.md).
-> **Phase 2:** the 10-class run + refuse-to-answer gate is in [`../scaleup-10class/`](../scaleup-10class/README.md).
+> **Phase 1:** the 3-class warm-up (81.1%) is in [`../1-warmup-3class/`](../1-warmup-3class/README.md).
+> **Phase 2:** the 10-class run + refuse-to-answer gate is in [`../2-scaleup-10class/`](../2-scaleup-10class/README.md).
+
+> **Snapshot.** `scripts/` and `results/` in this folder are frozen exactly as they
+> were when these numbers were produced (commit `b09ff76`, 8 scripts). They are
+> not the current code — later fixes (memory, validation-split) landed after this run.
+> They are here to read, not to run in place: each script resolves `Data/` and
+> `prepared/` relative to its own parent, so run the repo-root `scripts/` instead
+> (or `git show <commit>:scripts/...` for the original). Ongoing work lives there too.
 
 ## Headline results
 
@@ -65,11 +72,11 @@ not raw capacity — and here that translates directly into "learns vs. doesn't.
 
 **VGG** — note the four solid-zero rows/columns and the wide 8ASK/AM-SSB-SC/16PSK sink:
 
-![VGG 24-class confusion matrix](../../results/confusion_matrix_vgg_24class.png)
+![VGG 24-class confusion matrix](results/confusion_matrix_vgg_24class.png)
 
 **ResNet** — same four classes are still the weakest, but every one is learned:
 
-![ResNet 24-class confusion matrix](../../results/confusion_matrix_resnet_24class.png)
+![ResNet 24-class confusion matrix](results/confusion_matrix_resnet_24class.png)
 
 ## Against the paper
 

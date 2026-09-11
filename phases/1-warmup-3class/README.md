@@ -6,7 +6,14 @@ O'Shea, Roy & Clancy, *Over the Air Deep Learning Based Radio Signal Classificat
 CPU laptop and gives an encouraging first result.
 
 > **Phase 2:** the project later scaled up to 10 modulations with a refuse-to-answer
-> gate — see [`../scaleup-10class/`](../scaleup-10class/README.md).
+> gate — see [`../2-scaleup-10class/`](../2-scaleup-10class/README.md).
+
+> **Snapshot.** `scripts/` and `results/` in this folder are frozen exactly as they
+> were when these numbers were produced (commit `02a9289`, 5 scripts). They are
+> not the current code — `gate.py` and `high_snr.py` did not exist yet.
+> They are here to read, not to run in place: each script resolves `Data/` and
+> `prepared/` relative to its own parent, so run the repo-root `scripts/` instead
+> (or `git show <commit>:scripts/...` for the original). Ongoing work lives there too.
 
 **Interactive report:** [`report.html`](report.html) — open it in a browser (GitHub
 shows HTML as source, so download it or use a local preview). It has the interactive
@@ -66,7 +73,7 @@ Skip connections make training easier by letting each layer learn a small adjust
 instead of a full transformation, but they cannot recover information noise already
 destroyed. Both models hit the same ceiling.
 
-![ResNet 3-class confusion matrix](../../results/confusion_matrix_resnet_3class.png)
+![ResNet 3-class confusion matrix](results/confusion_matrix_resnet_3class.png)
 
 | Class | Precision | Recall | F1 |
 |---|---|---|---|

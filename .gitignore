@@ -22,3 +22,6 @@ __pycache__/
 
 # --- Editor/OS noise ---
 .DS_Store
+
+# --- Live-run scratch output (published figures live in phases/*/results/) ---
+results/

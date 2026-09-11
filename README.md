@@ -29,16 +29,16 @@ hard, look-alike classes (`64APSK`, `128QAM`, `128APSK`, `AM-DSB-SC` — precisi
 recall of 0.000, never once predicted), dumping their errors into three other classes.
 ResNet learns all 24. That shift — from "architecture is a minor detail" to
 "architecture is the difference between learning a class or not" — is the project's
-biggest finding. Full story in the [reports](report/README.md).
+biggest finding. Full story in the [phases](phases/README.md).
 
-![24-class confusion matrix, VGG](results/confusion_matrix_vgg_24class.png)
+![24-class confusion matrix, VGG](phases/3-full-24class/results/confusion_matrix_vgg_24class.png)
 
 ## The class sets
 
 Three runs, growing scope: an easy **3-class** warm-up, a curated **10-class** set
 chosen to span the major families, then the dataset's **full 24 classes** for the
 real replication. The 24-class list is in the
-[full replication report](report/full-24class/README.md); the curated 10 (still the
+[full replication report](phases/3-full-24class/README.md); the curated 10 (still the
 set `gate.py`'s refuse-to-answer demo uses) were chosen with two deliberately
 *confusable* "ladders" so the confusion matrix shows real structure, plus distinct
 anchors that stay easy to tell apart:
@@ -58,7 +58,7 @@ no Fourier transform, no hand-crafted features. It learns its own.
 ## Knowing when not to answer
 
 *(From the 10-class phase — the refuse-to-answer gate hasn't been extended to the
-full 24-class run yet; see [Next](report/full-24class/README.md#next).)*
+full 24-class run yet; see [Next](phases/3-full-24class/README.md#next).)*
 
 Forcing a guess on a signal that noise has already destroyed is a mistake. The
 model reports how confident it is, so `scripts/gate.py` lets it **abstain** when
@@ -71,7 +71,7 @@ ground-truth SNR (signal-to-noise ratio) shows the answered signals have a media
 of **+14 dB** and the abstained ones **−12 dB**. Plotting accuracy against true SNR
 reproduces the paper's classic S-curve.
 
-![Accuracy vs SNR](results/accuracy_vs_snr_vgg.png)
+![Accuracy vs SNR](phases/2-scaleup-10class/results/accuracy_vs_snr_vgg.png)
 
 ## Architecture
 
@@ -92,9 +92,9 @@ from `classes.txt`, so the same code trained all three phases.
 ## Repository layout
 
 ```
-scripts/
+scripts/           current, actively-maintained code
   data_prep.py     memory-maps the 19.5 GB dataset, samples N examples per class
-                   (--all-24 / --per-class), normalizes, 80/20 stratified split
+                   (--all-24 / --per-class), normalizes, shuffles, 80/20 split
   model.py         the VGG CNN (run directly to print the architecture)
   resnet_model.py  the ResNet variant with skip connections
   train.py         training with early stopping + best-model checkpointing
@@ -102,17 +102,18 @@ scripts/
   gate.py          refuse-to-answer gate: risk-coverage + accuracy-vs-SNR curves
   high_snr.py      scores VGG and ResNet on the clean, high-SNR slice (paper-style)
   colab_pipeline.py  trains + evaluates both models back-to-back (used on the GPU)
+phases/            one self-contained folder per phase, frozen at that run
+  README.md          index, and what each phase folder holds
+  1-warmup-3class/   Phase 1 — 3 classes, 81.1%          (5 scripts: no gate yet)
+  2-scaleup-10class/ Phase 2 — 10 classes + gate, 66.3%  (7 scripts)
+  3-full-24class/    Phase 3 — all 24 classes, 39.5/48.7% (8 scripts)
+                     each holds: scripts/ results/ README.md report.html
 colab/
   train_24class.ipynb  notebook that runs the pipeline on a free Colab GPU
-prepared/          the sampled + split arrays produced by data_prep.py
-                   (X_train/X_test/y_train/y_test.npy, snr_*.npy, classes.txt)
-models/            trained weights — vgg.keras, resnet.keras
-report/            write-ups, one folder per phase (interactive HTML + markdown)
-  README.md          index linking all three phase reports
-  warmup-3class/     Phase 1 — the 3-class warm-up (81.1%)
-  scaleup-10class/   Phase 2 — 10 classes + refuse-to-answer gate
-  full-24class/      Phase 3 — the full 24-class replication (Colab GPU)
-results/           generated figures
+prepared/          sampled + split arrays from data_prep.py (gitignored)
+models/            trained weights — vgg.keras, resnet.keras (gitignored)
+results/           scratch output from live runs (gitignored; the published
+                   figures live inside each phase folder)
 Data/              the raw RadioML dataset (gitignored — see Setup)
 ```
 
@@ -170,14 +171,14 @@ averages in hopeless sub-0 dB signals the paper's peak number excludes.
 a qualitative one: VGG never predicts 4 of the 24 classes (precision *and* recall of
 0.000), while ResNet learns all 24. At this scale, **architecture stops being a minor
 detail.** Full breakdown, including the garbage-can effect and why these specific four
-classes collapse, in the [full replication report](report/full-24class/README.md).
+classes collapse, in the [full replication report](phases/3-full-24class/README.md).
 
 ## Currently extending
 
 The 24-class run used 20,000 examples/class — a deliberate tradeoff for a
 ~25-minute Colab budget, and the likely reason VGG collapses on its four hardest
 classes and neither model matches the paper's high-SNR numbers (details in the
-[full replication report](report/full-24class/README.md#against-the-paper)). The
+[full replication report](phases/3-full-24class/README.md#against-the-paper)). The
 next experiment tests that diagnosis directly: **more data, same architecture,
 same everything else.**
 

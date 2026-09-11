@@ -193,9 +193,9 @@
     </div>
     <div class="callout" style="margin-top: 1rem;">
       <p><strong>Phase 2 of 3.</strong> The original 3-class warm-up (81.1%) is in the
-      <a href="../warmup-3class/report.html">warm-up report</a>; the project later scaled
+      <a href="../1-warmup-3class/report.html">warm-up report</a>; the project later scaled
       to the full 24-class replication — see the
-      <a href="../full-24class/report.html">full replication report</a>.</p>
+      <a href="../3-full-24class/report.html">full replication report</a>.</p>
     </div>
   </header>
 
@@ -326,7 +326,7 @@
     <figure>
       <p class="fig-title">Confusion matrix — held-out test set</p>
       <p class="fig-sub">Rows: true modulation · columns: model's guess · row-normalized</p>
-      <img class="fig" src="../../results/confusion_matrix_vgg_10class.png" alt="Ten by ten confusion matrix for the VGG model. The 8PSK column is a bright vertical stripe, showing many classes misclassified as 8PSK. QPSK and 256QAM are strongly confused with each other. Distinct classes like FM, AM, OOK, 16QAM and 64QAM have bright diagonals.">
+      <img class="fig" src="results/confusion_matrix_vgg_10class.png" alt="Ten by ten confusion matrix for the VGG model. The 8PSK column is a bright vertical stripe, showing many classes misclassified as 8PSK. QPSK and 256QAM are strongly confused with each other. Distinct classes like FM, AM, OOK, 16QAM and 64QAM have bright diagonals.">
       <figcaption>The 8PSK column is a vertical stripe — nearly every class dumps a slice of its errors there. That single "when unsure, say 8PSK" sink accounts for ~47% of all errors.</figcaption>
     </figure>
     <p>Three findings read straight off the grid:</p>
@@ -358,7 +358,7 @@
     <figure>
       <p class="fig-title">Risk–coverage trade-off</p>
       <p class="fig-sub">Raising the threshold moves left: answer fewer, be right more often</p>
-      <img class="fig" src="../../results/risk_coverage_vgg.png" alt="Risk-coverage curve. Selective accuracy is near 100 percent at low coverage and falls to 66 percent at full coverage, with a marked recommended point answering 68 percent of signals at 90 percent accuracy.">
+      <img class="fig" src="results/risk_coverage_vgg.png" alt="Risk-coverage curve. Selective accuracy is near 100 percent at low coverage and falls to 66 percent at full coverage, with a marked recommended point answering 68 percent of signals at 90 percent accuracy.">
       <figcaption>The recommended operating point (red) answers 68% of signals at 90% accuracy; the dashed line is the 66% forced-answer baseline.</figcaption>
     </figure>
     <div class="tbl-wrap"><table>
@@ -381,7 +381,7 @@
     <figure>
       <p class="fig-title">Accuracy vs true SNR</p>
       <p class="fig-sub">16,000 test examples, grouped by real SNR (−20 to +30 dB)</p>
-      <img class="fig" src="../../results/accuracy_vs_snr_vgg.png" alt="Accuracy versus true SNR. A classic S-curve: flat near the 10 percent chance line below minus 14 dB, rising steeply through 0 dB, and plateauing near 94 percent above plus 4 dB.">
+      <img class="fig" src="results/accuracy_vs_snr_vgg.png" alt="Accuracy versus true SNR. A classic S-curve: flat near the 10 percent chance line below minus 14 dB, rising steeply through 0 dB, and plateauing near 94 percent above plus 4 dB.">
       <figcaption>The paper's S-curve, now from real SNR labels: ~chance (10%) below −14 dB, rising through 0 dB, plateauing near 94%. It also confirms the blind-noise proxy from Phase 1 was right all along.</figcaption>
     </figure>
     <div class="callout">
@@ -396,7 +396,7 @@
     <figure>
       <p class="fig-title">Confusion matrix — ResNet, held-out test set</p>
       <p class="fig-sub">Rows: true modulation · columns: model's guess · row-normalized</p>
-      <img class="fig" src="../../results/confusion_matrix_resnet_10class.png" alt="Ten by ten confusion matrix for the ResNet model. The 8PSK column is no longer a bright stripe; instead the OOK column is now the vertical stripe that collects errors from every class. QPSK and 256QAM remain confused with each other.">
+      <img class="fig" src="results/confusion_matrix_resnet_10class.png" alt="Ten by ten confusion matrix for the ResNet model. The 8PSK column is no longer a bright stripe; instead the OOK column is now the vertical stripe that collects errors from every class. QPSK and 256QAM remain confused with each other.">
       <figcaption>ResNet <em>fixes</em> 8PSK (precision 0.335 → 0.608) — but the junk didn't vanish, it relocated. The OOK column is now the vertical stripe: OOK precision falls to 0.402 while its recall climbs to 0.791. The garbage-can just moved.</figcaption>
     </figure>
     <p>The headline finding: <strong>a different architecture didn't remove the "dump the unclassifiable junk somewhere" behaviour — it only changed <em>where</em>.</strong> With VGG the sink was 8PSK; with ResNet it's OOK (BPSK→OOK 273, 16QAM→OOK 257, GMSK→OOK 254, 8PSK→OOK 240, FM→OOK 214…). The garbage-can is not a quirk of one model — it's what any of these networks do when noise has destroyed a signal and they are still forced to pick a class. The <em>gate</em> is the real fix, and it works just as well on ResNet (69.8% answered at 90% accuracy). QPSK ⇄ 256QAM persists too (839 errors vs VGG's 922).</p>
