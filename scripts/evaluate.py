@@ -115,10 +115,17 @@ print()
 #    printed table carry the numbers instead.
 # ----------------------------------------------------------------------------
 n = len(classes)
-side = max(6, n * 0.55)                       # figure grows with class count
+annotate = n <= 12        # past this, per-cell text overlaps no matter the size
+
+# An annotated cell holds two lines of text ("12.3%" over "(456)"), so it needs
+# real estate -- roughly 0.85in per cell plus margin for labels and colorbar.
+# Without annotation a much tighter grid stays perfectly readable.
+side = max(6, n * 0.85 + 2.5) if annotate else max(6, n * 0.55)
 fig, ax = plt.subplots(figsize=(side, side * 5 / 6))
 im = ax.imshow(cm_pct, cmap="Blues", vmin=0, vmax=100)
 
+# Rotate the x labels upright: class names like "AM-DSB-WC" are long enough to
+# collide with their neighbours at any realistic figure width if left flat.
 tick_fontsize = 9 if n <= 12 else max(5, 9 - (n - 12) * 0.25)
 ax.set_xticks(range(n), classes, rotation=90, fontsize=tick_fontsize)
 ax.set_yticks(range(n), classes, fontsize=tick_fontsize)
@@ -126,12 +133,12 @@ ax.set_xlabel("Model's guess")
 ax.set_ylabel("True modulation")
 ax.set_title(f"{args.model.upper()} — confusion matrix, accuracy {accuracy:.1%}")
 
-if n <= 12:   # beyond this, per-cell text just overlaps into noise
+if annotate:
     for i in range(n):
         for j in range(n):
             ax.text(j, i, f"{cm_pct[i, j]:.1f}%\n({cm[i, j]})",
                     ha="center", va="center",
-                    color="white" if cm_pct[i, j] > 50 else "black", fontsize=9)
+                    color="white" if cm_pct[i, j] > 50 else "black", fontsize=8)
 
 fig.colorbar(im, ax=ax, label="% of that true class")
 fig.tight_layout()
