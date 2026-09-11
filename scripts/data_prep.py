@@ -126,12 +126,26 @@ idx = np.arange(len(picked_rows))
 train_idx, test_idx = train_test_split(
     idx, test_size=TEST_FRACTION, random_state=SEED, stratify=picked_y
 )
-# Re-sort each split by row-number (train_idx/test_idx themselves are in random
-# order) so the upcoming disk reads are sequential-ish again, same as before.
-train_idx = train_idx[np.argsort(picked_rows[train_idx])]
-test_idx = test_idx[np.argsort(picked_rows[test_idx])]
-train_rows, test_rows = picked_rows[train_idx], picked_rows[test_idx]
-y_train, y_test = picked_y[train_idx], picked_y[test_idx]
+# Read each split in ascending row order so the disk reads stay sequential-ish,
+# then UNDO that ordering before saving.
+#
+# This matters more than it looks. The dataset is laid out class-by-class, so
+# ascending row order == sorted by class. Keras's validation_split takes a
+# contiguous slice off the END of the training array, so handing it class-sorted
+# data means the "validation set" is really just the last few classes -- the
+# model then early-stops and checkpoints on a signal that ignores most of the
+# problem. (train_test_split shuffles its output for exactly this reason; sorting
+# afterwards silently threw that away.) So: sort for the read, shuffle for the save.
+read_order_train = np.argsort(picked_rows[train_idx])
+read_order_test = np.argsort(picked_rows[test_idx])
+train_rows = picked_rows[train_idx][read_order_train]
+test_rows = picked_rows[test_idx][read_order_test]
+y_train = picked_y[train_idx][read_order_train]
+y_test = picked_y[test_idx][read_order_test]
+
+# The permutation applied to every saved array, restoring a shuffled order.
+shuffle_train = rng.permutation(len(train_rows))
+shuffle_test = rng.permutation(len(test_rows))
 
 signals_mm = np.load(DATA_DIR / "signals.npy", mmap_mode="r")  # no data loaded yet
 print("Signals memmap:", signals_mm.shape, signals_mm.dtype)
@@ -161,6 +175,15 @@ def gather(rows, name):
 
 X_train, snr_train = gather(train_rows, "train")
 X_test, snr_test = gather(test_rows, "test")
+
+# Apply the shuffle now that the (sequential) reads are done, so nothing saved to
+# disk is in class order. Done in place per-array to avoid a second full copy.
+X_train, y_train = X_train[shuffle_train], y_train[shuffle_train]
+X_test, y_test = X_test[shuffle_test], y_test[shuffle_test]
+if snr_train is not None:
+    snr_train, snr_test = snr_train[shuffle_train], snr_test[shuffle_test]
+
+assert not np.all(np.diff(y_train) >= 0), "y_train is still class-sorted -- shuffle failed"
 if snr_train is not None:
     print(f"Ground-truth SNR range: {min(snr_train.min(), snr_test.min()):.0f}.."
           f"{max(snr_train.max(), snr_test.max()):.0f} dB")

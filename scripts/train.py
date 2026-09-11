@@ -29,6 +29,14 @@ Vocabulary (first time each appears):
 Run it with:   .venv/bin/python scripts/train.py
                .venv/bin/python scripts/train.py --model resnet
 On a CPU laptop this takes a few minutes.
+
+MEMORY NOTE: passing a plain numpy array to model.fit()/evaluate() makes Keras
+embed a SECOND full copy in memory (via Dataset.from_tensor_slices) on top of
+the np.load() copy -- two 5.86 GB copies of X_train alive at once is why a
+12.7 GB Colab VM ran out of RAM even though the file itself is smaller than
+that. Fixed by loading with mmap_mode="r" (stays on disk, touched lazily) and
+feeding Keras small batches through a PyDataset instead of a raw array, so at
+most one batch (a few MB) is ever materialized.
 """
 
 import os
@@ -70,22 +78,83 @@ MODEL_PATH = MODEL_DIR / f"{args.model}.keras"   # where we save the trained mod
 keras.utils.set_random_seed(SEED)
 
 # ----------------------------------------------------------------------------
-# 1. Load the prepared data
+# 1. Load the prepared data (memory-mapped: stays on disk until a batch reads it)
 # ----------------------------------------------------------------------------
-X_train = np.load(PREP_DIR / "X_train.npy")   # (12000, 1024, 2) float32
-y_train = np.load(PREP_DIR / "y_train.npy")   # (12000,) integers 0/1/2
-X_test = np.load(PREP_DIR / "X_test.npy")     # (3000, 1024, 2)  -- untouched here
-y_test = np.load(PREP_DIR / "y_test.npy")     # (3000,)
+X_train_mm = np.load(PREP_DIR / "X_train.npy", mmap_mode="r")
+y_train_mm = np.load(PREP_DIR / "y_train.npy", mmap_mode="r")
+X_test_mm = np.load(PREP_DIR / "X_test.npy", mmap_mode="r")
+y_test_mm = np.load(PREP_DIR / "y_test.npy", mmap_mode="r")
 
 classes = (PREP_DIR / "classes.txt").read_text().split()
 print("Classes:", classes)
-print("Train:", X_train.shape, "| Test:", X_test.shape)
+print("Train:", X_train_mm.shape, "| Test:", X_test_mm.shape)
+
+
+class NpyBatches(keras.utils.PyDataset):
+    """Feeds Keras one batch at a time from a memory-mapped .npy array.
+
+    Keeps VAL_FRACTION's holdout semantics identical to plain
+    model.fit(X, y, validation_split=...): a contiguous slice of the END of
+    the array, taken before any shuffling. Only the row order WITHIN the
+    train portion is shuffled each epoch (shuffle=True) -- matches what
+    validation_split + fit(shuffle=True) does with a raw array.
+
+    ponytail: random-access batches read scattered rows from disk each epoch,
+    which is slower than sequential I/O. Fine at this dataset size; if this
+    ever becomes the bottleneck, sort each batch's indices before reading
+    (mmap arrays reward ascending access) or convert to a shuffled TFRecord.
+    """
+
+    def __init__(self, X_mm, y_mm, indices, batch_size, shuffle, **kwargs):
+        super().__init__(**kwargs)
+        self.X_mm, self.y_mm = X_mm, y_mm
+        self.indices = np.array(indices)
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+
+    def __len__(self):
+        return int(np.ceil(len(self.indices) / self.batch_size))
+
+    def __getitem__(self, i):
+        batch_idx = self.indices[i * self.batch_size:(i + 1) * self.batch_size]
+        return (
+            np.asarray(self.X_mm[batch_idx], dtype="float32"),
+            np.asarray(self.y_mm[batch_idx]),
+        )
+
+    def on_epoch_end(self):
+        if self.shuffle:
+            np.random.shuffle(self.indices)
+
+
+rng = np.random.default_rng(SEED)
+n_train_total = X_train_mm.shape[0]
+n_val = int(n_train_total * VAL_FRACTION)
+# Same split point validation_split uses: last VAL_FRACTION untouched, rest shuffled.
+train_idx = rng.permutation(n_train_total - n_val)
+val_idx = np.arange(n_train_total - n_val, n_train_total)
+
+# Taking a contiguous tail slice as validation only works if the saved data is
+# already shuffled. If it happens to be class-sorted, that slice silently becomes
+# "just the last few classes" and the model early-stops on a meaningless signal --
+# a bug that costs a full training run to notice. Cheap to check, so check.
+val_classes = np.unique(np.asarray(y_train_mm[val_idx]))
+if len(val_classes) < len(classes):
+    raise SystemExit(
+        f"Validation slice covers only {len(val_classes)} of {len(classes)} classes "
+        f"({val_classes.tolist()}).\nThe prepared data looks class-sorted rather than "
+        f"shuffled -- re-run scripts/data_prep.py to regenerate it."
+    )
+
+train_ds = NpyBatches(X_train_mm, y_train_mm, train_idx, BATCH_SIZE, shuffle=True)
+val_ds = NpyBatches(X_train_mm, y_train_mm, val_idx, BATCH_SIZE, shuffle=False)
+test_ds = NpyBatches(X_test_mm, y_test_mm, np.arange(X_test_mm.shape[0]), BATCH_SIZE, shuffle=False)
 
 # ----------------------------------------------------------------------------
 # 2. Build the model (blank -- either the VGG from Step 3 or the ResNet)
 # ----------------------------------------------------------------------------
 print(f"Architecture: {args.model}")
-model = BUILDERS[args.model](input_shape=X_train.shape[1:], n_classes=len(classes))
+model = BUILDERS[args.model](input_shape=X_train_mm.shape[1:], n_classes=len(classes))
 model.summary()
 
 # ----------------------------------------------------------------------------
@@ -118,9 +187,8 @@ callbacks = [
 # 5. Fit -- the actual training loop
 # ----------------------------------------------------------------------------
 history = model.fit(
-    X_train, y_train,
-    validation_split=VAL_FRACTION,   # hold back 20% of TRAIN to watch each epoch
-    batch_size=BATCH_SIZE,
+    train_ds,
+    validation_data=val_ds,          # same 20%-of-TRAIN holdout as before
     epochs=EPOCHS,
     callbacks=callbacks,
     verbose=2,                       # one tidy line per epoch
@@ -131,6 +199,6 @@ model.save(MODEL_PATH)
 print(f"\nSaved trained model to: {MODEL_PATH}")
 
 # A quick, honest score on the untouched TEST set (full grading is Step 5).
-test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
+test_loss, test_acc = model.evaluate(test_ds, verbose=0)
 print(f"Held-out TEST accuracy: {test_acc:.3f}  (loss {test_loss:.3f})")
 print("Done. Next step: evaluate (confusion matrix + accuracy-vs-SNR).")
