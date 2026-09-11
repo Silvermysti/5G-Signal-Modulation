@@ -107,6 +107,23 @@ rest of the project — just with *quantity* joining *noise* as a constraint at 
   training-order effects, or something else that makes VGG give up on exactly these
   classes.
 
+## The trained weights are here
+
+`models/vgg.keras` and `models/resnet.keras` in this folder are the actual weights
+behind the numbers above — committed so the results can be checked without a GPU or a
+retrain. Point the repo-root scripts at them:
+
+```bash
+.venv/bin/python scripts/data_prep.py --all-24 --per-class 20000   # ~2 min, rebuilds prepared/
+cp phases/3-full-24class/models/*.keras models/
+.venv/bin/python scripts/evaluate.py --model vgg      # -> 39.5%
+.venv/bin/python scripts/evaluate.py --model resnet   # -> 48.7%
+.venv/bin/python scripts/high_snr.py                  # -> 57.9% / 75.8% at high SNR
+```
+
+The data prep is deterministic (seed 42), so the held-out test set is identical to the
+one these numbers came from.
+
 ## Reproducing
 
 Data prep now supports the full class list directly:

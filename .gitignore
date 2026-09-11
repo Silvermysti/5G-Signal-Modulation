@@ -1,10 +1,16 @@
 # --- Never commit the dataset (huge + non-commercial license) ---
 Data/
 prepared/
-models/
 *.npy
 *.h5
+
+# --- Trained weights: the live models/ dir is scratch, but each phase's
+#     published weights ARE committed (a few MB each, and they let anyone
+#     reproduce that phase's numbers without retraining). ---
+models/
 *.keras
+!phases/*/models/
+!phases/*/models/*.keras
 
 # --- Colab upload bundles (huge, regenerable via data_prep.py + tar) ---
 colab_uploads/

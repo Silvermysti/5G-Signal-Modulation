@@ -108,10 +108,13 @@ phases/            one self-contained folder per phase, frozen at that run
   2-scaleup-10class/ Phase 2 — 10 classes + gate, 66.3%  (7 scripts)
   3-full-24class/    Phase 3 — all 24 classes, 39.5/48.7% (8 scripts)
                      each holds: scripts/ results/ README.md report.html
+                     phase 3 also ships models/ — the trained weights, so the
+                     numbers can be verified without a GPU or a retrain
 colab/
   train_24class.ipynb  notebook that runs the pipeline on a free Colab GPU
 prepared/          sampled + split arrays from data_prep.py (gitignored)
-models/            trained weights — vgg.keras, resnet.keras (gitignored)
+models/            scratch weights from live runs (gitignored; the published
+                   weights live in phases/3-full-24class/models/)
 results/           scratch output from live runs (gitignored; the published
                    figures live inside each phase folder)
 Data/              the raw RadioML dataset (gitignored — see Setup)
