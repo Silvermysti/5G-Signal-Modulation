@@ -23,4 +23,4 @@ ground-truth SNR — then **Phase 3** for the full 24-class replication, where t
 "architecture doesn't matter much" lesson from Phases 1–2 breaks down.
 
 Dataset: DeepSig RadioML 2018.01A, CC BY-NC-SA 4.0 (non-commercial, attribution
-required). See the repo root `README.md` and `CLAUDE.md` for setup and data layout.
+required). See the repo root `README.md` for setup and data layout.

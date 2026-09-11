@@ -1,4 +1,4 @@
-# Warm-up report — 3-class CNN (Phase 1 of 2)
+# Warm-up report — 3-class CNN (Phase 1 of 3)
 
 The project's first stage: a scaled-down replication of the VGG-style CNN from
 O'Shea, Roy & Clancy, *Over the Air Deep Learning Based Radio Signal Classification*
@@ -88,5 +88,5 @@ Set `CHOSEN_CLASSES = ["OOK", "QPSK", "FM"]` and `PER_CLASS = 5000` at the top o
 Add `--model resnet` to train/evaluate for the residual network.
 
 Dataset: DeepSig RadioML 2018.01A, CC BY-NC-SA 4.0 (non-commercial, attribution
-required). The dataset and trained model are gitignored — see the repo root
-`CLAUDE.md` for the expected `Data/` layout.
+required). The dataset and trained model are gitignored — see
+the repo root `README.md` (Setup section) for the expected `Data/` layout.

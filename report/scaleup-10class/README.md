@@ -1,4 +1,4 @@
-# Scale-up report — 10-class CNN + refuse-to-answer gate (Phase 2 of 2)
+# Scale-up report — 10-class CNN + refuse-to-answer gate (Phase 2 of 3)
 
 The project's second stage: broaden from the easy 3-class warm-up to **10 modulations**
 spanning the major families, then add a **refuse-to-answer gate** that lets the model
@@ -37,7 +37,7 @@ workhorses of real 5G data channels.
 
 ## Confusion matrix
 
-![VGG 10-class confusion matrix](../../results/confusion_matrix_vgg.png)
+![VGG 10-class confusion matrix](../../results/confusion_matrix_vgg_10class.png)
 
 The 66% average hides a clear *structure* — three findings worth reading off the grid:
 
@@ -116,7 +116,7 @@ average barely moved — **67.5%** vs VGG's 66.3%, just **+1.2%** — the same t
 we saw on the 3-class warm-up. Noise is the ceiling, not the architecture. But the
 confusion matrix is more interesting than the average:
 
-![ResNet 10-class confusion matrix](../../results/confusion_matrix_resnet.png)
+![ResNet 10-class confusion matrix](../../results/confusion_matrix_resnet_10class.png)
 
 **The garbage-can moved.** VGG dumped its noisy junk into **8PSK** (precision 0.335).
 ResNet *fixes* 8PSK (precision → 0.608) — but the junk didn't vanish, it relocated to
@@ -175,5 +175,5 @@ same commands produced the ResNet numbers above), or `--target-accuracy 0.95` to
 `gate.py` for a stricter gate.
 
 Dataset: DeepSig RadioML 2018.01A, CC BY-NC-SA 4.0 (non-commercial, attribution
-required). The dataset and trained model are gitignored — see the repo root
-`CLAUDE.md` for the expected `Data/` layout.
+required). The dataset and trained model are gitignored — see
+the repo root `README.md` (Setup section) for the expected `Data/` layout.

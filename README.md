@@ -10,6 +10,10 @@ on a laptop CPU (81.1%), a **10-class** scale-up with a refuse-to-answer gate
 (66.3% → 90% gated), and the **full 24-class replication** on a free Colab GPU —
 the paper's actual scope.
 
+> **Status:** all three phases complete, documented, and reproducible end-to-end.
+> Actively being extended — see [Currently extending](#currently-extending) below
+> for what's running next.
+
 | | |
 |---|---|
 | **Full replication (24 classes)** | VGG **39.5%** / ResNet **48.7%** on 96,000 held-out (chance = 4.2%) |
@@ -27,7 +31,7 @@ ResNet learns all 24. That shift — from "architecture is a minor detail" to
 "architecture is the difference between learning a class or not" — is the project's
 biggest finding. Full story in the [reports](report/README.md).
 
-![24-class confusion matrix, VGG](results/confusion_matrix_vgg.png)
+![24-class confusion matrix, VGG](results/confusion_matrix_vgg_24class.png)
 
 ## The class sets
 
@@ -167,6 +171,29 @@ a qualitative one: VGG never predicts 4 of the 24 classes (precision *and* recal
 0.000), while ResNet learns all 24. At this scale, **architecture stops being a minor
 detail.** Full breakdown, including the garbage-can effect and why these specific four
 classes collapse, in the [full replication report](report/full-24class/README.md).
+
+## Currently extending
+
+The 24-class run used 20,000 examples/class — a deliberate tradeoff for a
+~25-minute Colab budget, and the likely reason VGG collapses on its four hardest
+classes and neither model matches the paper's high-SNR numbers (details in the
+[full replication report](report/full-24class/README.md#against-the-paper)). The
+next experiment tests that diagnosis directly: **more data, same architecture,
+same everything else.**
+
+- `data_prep.py` was refactored to split-then-read instead of read-then-split,
+  roughly halving peak RAM — the change that makes preparing significantly more
+  data on a 15 GB laptop actually feasible (verified: correct stratified splits,
+  no data loss, same reproducible seed behavior).
+- **40,000/class (960k examples)** and **60,000/class (1.44M examples, ~57% of the
+  paper's own per-class density)** are already prepared, bundled, and ready to train
+  — `colab/train_24class.ipynb` now takes one variable (`PAYLOAD_NAME`) to switch
+  between data sizes, with results saved to a separate namespaced folder per run so
+  nothing overwrites a prior experiment.
+- Question being tested: does more data alone close the gap on the four collapsed
+  classes, or is it (also) an architecture/training-budget limit? Either answer is
+  useful — this project's throughline has been "diagnose the actual bottleneck,
+  don't just add compute and hope."
 
 ## Not built (yet)
 

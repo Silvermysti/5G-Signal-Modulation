@@ -65,11 +65,11 @@ not raw capacity — and here that translates directly into "learns vs. doesn't.
 
 **VGG** — note the four solid-zero rows/columns and the wide 8ASK/AM-SSB-SC/16PSK sink:
 
-![VGG 24-class confusion matrix](../../results/confusion_matrix_vgg.png)
+![VGG 24-class confusion matrix](../../results/confusion_matrix_vgg_24class.png)
 
 **ResNet** — same four classes are still the weakest, but every one is learned:
 
-![ResNet 24-class confusion matrix](../../results/confusion_matrix_resnet.png)
+![ResNet 24-class confusion matrix](../../results/confusion_matrix_resnet_24class.png)
 
 ## Against the paper
 
@@ -117,5 +117,5 @@ On a 12-core CPU laptop the 24-class/480k run is impractically slow; `colab/trai
 runs the same scripts on a free Colab GPU in ~25 minutes total for both models.
 
 Dataset: DeepSig RadioML 2018.01A, CC BY-NC-SA 4.0 (non-commercial, attribution
-required). The dataset and trained models are gitignored — see the repo root
-`CLAUDE.md` for the expected `Data/` layout.
+required). The dataset and trained models are gitignored — see
+the repo root `README.md` (Setup section) for the expected `Data/` layout.

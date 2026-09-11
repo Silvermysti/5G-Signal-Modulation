@@ -326,7 +326,7 @@
     <figure>
       <p class="fig-title">Confusion matrix — held-out test set</p>
       <p class="fig-sub">Rows: true modulation · columns: model's guess · row-normalized</p>
-      <img class="fig" src="../../results/confusion_matrix_vgg.png" alt="Ten by ten confusion matrix for the VGG model. The 8PSK column is a bright vertical stripe, showing many classes misclassified as 8PSK. QPSK and 256QAM are strongly confused with each other. Distinct classes like FM, AM, OOK, 16QAM and 64QAM have bright diagonals.">
+      <img class="fig" src="../../results/confusion_matrix_vgg_10class.png" alt="Ten by ten confusion matrix for the VGG model. The 8PSK column is a bright vertical stripe, showing many classes misclassified as 8PSK. QPSK and 256QAM are strongly confused with each other. Distinct classes like FM, AM, OOK, 16QAM and 64QAM have bright diagonals.">
       <figcaption>The 8PSK column is a vertical stripe — nearly every class dumps a slice of its errors there. That single "when unsure, say 8PSK" sink accounts for ~47% of all errors.</figcaption>
     </figure>
     <p>Three findings read straight off the grid:</p>
@@ -396,7 +396,7 @@
     <figure>
       <p class="fig-title">Confusion matrix — ResNet, held-out test set</p>
       <p class="fig-sub">Rows: true modulation · columns: model's guess · row-normalized</p>
-      <img class="fig" src="../../results/confusion_matrix_resnet.png" alt="Ten by ten confusion matrix for the ResNet model. The 8PSK column is no longer a bright stripe; instead the OOK column is now the vertical stripe that collects errors from every class. QPSK and 256QAM remain confused with each other.">
+      <img class="fig" src="../../results/confusion_matrix_resnet_10class.png" alt="Ten by ten confusion matrix for the ResNet model. The 8PSK column is no longer a bright stripe; instead the OOK column is now the vertical stripe that collects errors from every class. QPSK and 256QAM remain confused with each other.">
       <figcaption>ResNet <em>fixes</em> 8PSK (precision 0.335 → 0.608) — but the junk didn't vanish, it relocated. The OOK column is now the vertical stripe: OOK precision falls to 0.402 while its recall climbs to 0.791. The garbage-can just moved.</figcaption>
     </figure>
     <p>The headline finding: <strong>a different architecture didn't remove the "dump the unclassifiable junk somewhere" behaviour — it only changed <em>where</em>.</strong> With VGG the sink was 8PSK; with ResNet it's OOK (BPSK→OOK 273, 16QAM→OOK 257, GMSK→OOK 254, 8PSK→OOK 240, FM→OOK 214…). The garbage-can is not a quirk of one model — it's what any of these networks do when noise has destroyed a signal and they are still forced to pick a class. The <em>gate</em> is the real fix, and it works just as well on ResNet (69.8% answered at 90% accuracy). QPSK ⇄ 256QAM persists too (839 errors vs VGG's 922).</p>
@@ -441,7 +441,7 @@
   </section>
 
   <footer>
-    <p>Dataset: DeepSig RadioML 2018.01A (CC BY-NC-SA 4.0 — non-commercial, attribution required). Reference: T. O'Shea, T. Roy, T. C. Clancy, "Over the Air Deep Learning Based Radio Signal Classification," IEEE J-STSP, 2018. Code: <a href="https://github.com/Silvermysti/5G-Signal-Modulation">github.com/Silvermysti/5G-Signal-Modulation</a> (private).</p>
+    <p>Dataset: DeepSig RadioML 2018.01A (CC BY-NC-SA 4.0 — non-commercial, attribution required). Reference: T. O'Shea, T. Roy, T. C. Clancy, "Over the Air Deep Learning Based Radio Signal Classification," IEEE J-STSP, 2018. Code: <a href="https://github.com/Silvermysti/5G-Signal-Modulation">github.com/Silvermysti/5G-Signal-Modulation</a>.</p>
   </footer>
 
 </div>

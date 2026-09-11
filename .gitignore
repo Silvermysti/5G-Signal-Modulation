@@ -6,6 +6,10 @@ models/
 *.h5
 *.keras
 
+# --- Colab upload bundles (huge, regenerable via data_prep.py + tar) ---
+colab_uploads/
+*.tar
+
 # --- Never commit the virtual environment (huge, machine-specific) ---
 .venv/
 

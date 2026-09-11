@@ -258,13 +258,13 @@
     <figure>
       <p class="fig-title">VGG — 24-class confusion matrix</p>
       <p class="fig-sub">Note the four rows with no diagonal entry, and the wide 8ASK / AM-SSB-SC / 16PSK columns</p>
-      <img class="fig" src="../../results/confusion_matrix_vgg.png" alt="24 by 24 confusion matrix for VGG. Four rows (64APSK, 128QAM, 128APSK, AM-DSB-SC) have zero on the diagonal — every example from these classes is misclassified. Three columns (8ASK, AM-SSB-SC, 16PSK) are bright vertical stripes absorbing errors from many other classes.">
+      <img class="fig" src="../../results/confusion_matrix_vgg_24class.png" alt="24 by 24 confusion matrix for VGG. Four rows (64APSK, 128QAM, 128APSK, AM-DSB-SC) have zero on the diagonal — every example from these classes is misclassified. Three columns (8ASK, AM-SSB-SC, 16PSK) are bright vertical stripes absorbing errors from many other classes.">
       <figcaption>VGG, all 24 classes. Four collapsed classes; three columns act as a shared garbage-can sink.</figcaption>
     </figure>
     <figure>
       <p class="fig-title">ResNet — 24-class confusion matrix</p>
       <p class="fig-sub">Same four hard classes are still the weakest, but each keeps a real diagonal</p>
-      <img class="fig" src="../../results/confusion_matrix_resnet.png" alt="24 by 24 confusion matrix for ResNet. All 24 classes have a nonzero diagonal, though the same four hard classes (64APSK, 128QAM, 128APSK, AM-DSB-SC) remain the weakest.">
+      <img class="fig" src="../../results/confusion_matrix_resnet_24class.png" alt="24 by 24 confusion matrix for ResNet. All 24 classes have a nonzero diagonal, though the same four hard classes (64APSK, 128QAM, 128APSK, AM-DSB-SC) remain the weakest.">
       <figcaption>ResNet, all 24 classes. No collapsed classes — the hardest four are weak but nonzero.</figcaption>
     </figure>
   </section>
@@ -295,7 +295,7 @@
   </section>
 
   <footer>
-    <p>Dataset: DeepSig RadioML 2018.01A (CC BY-NC-SA 4.0 — non-commercial, attribution required). Reference: T. O'Shea, T. Roy, T. C. Clancy, "Over the Air Deep Learning Based Radio Signal Classification," IEEE J-STSP, 2018. Code: <a href="https://github.com/Silvermysti/5G-Signal-Modulation">github.com/Silvermysti/5G-Signal-Modulation</a> (private).</p>
+    <p>Dataset: DeepSig RadioML 2018.01A (CC BY-NC-SA 4.0 — non-commercial, attribution required). Reference: T. O'Shea, T. Roy, T. C. Clancy, "Over the Air Deep Learning Based Radio Signal Classification," IEEE J-STSP, 2018. Code: <a href="https://github.com/Silvermysti/5G-Signal-Modulation">github.com/Silvermysti/5G-Signal-Modulation</a>.</p>
   </footer>
 
 </div>
