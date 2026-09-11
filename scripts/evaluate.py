@@ -107,22 +107,31 @@ print()
 
 # ----------------------------------------------------------------------------
 # 5. Draw the heatmap
+#    The figure, its fonts, and whether we can fit per-cell text all need to
+#    scale with the number of classes -- a fixed small size looks fine at 3
+#    classes but turns into illegible overlapping text at 24 (576 cells).
+#    The exact counts are already in the console table above, so above a
+#    legibility threshold we drop the per-cell text and let color + the
+#    printed table carry the numbers instead.
 # ----------------------------------------------------------------------------
-fig, ax = plt.subplots(figsize=(6, 5))
+n = len(classes)
+side = max(6, n * 0.55)                       # figure grows with class count
+fig, ax = plt.subplots(figsize=(side, side * 5 / 6))
 im = ax.imshow(cm_pct, cmap="Blues", vmin=0, vmax=100)
 
-ax.set_xticks(range(len(classes)), classes)
-ax.set_yticks(range(len(classes)), classes)
+tick_fontsize = 9 if n <= 12 else max(5, 9 - (n - 12) * 0.25)
+ax.set_xticks(range(n), classes, rotation=90, fontsize=tick_fontsize)
+ax.set_yticks(range(n), classes, fontsize=tick_fontsize)
 ax.set_xlabel("Model's guess")
 ax.set_ylabel("True modulation")
 ax.set_title(f"{args.model.upper()} — confusion matrix, accuracy {accuracy:.1%}")
 
-# Write the number inside each square (white text on the dark squares).
-for i in range(len(classes)):
-    for j in range(len(classes)):
-        ax.text(j, i, f"{cm_pct[i, j]:.1f}%\n({cm[i, j]})",
-                ha="center", va="center",
-                color="white" if cm_pct[i, j] > 50 else "black", fontsize=9)
+if n <= 12:   # beyond this, per-cell text just overlaps into noise
+    for i in range(n):
+        for j in range(n):
+            ax.text(j, i, f"{cm_pct[i, j]:.1f}%\n({cm[i, j]})",
+                    ha="center", va="center",
+                    color="white" if cm_pct[i, j] > 50 else "black", fontsize=9)
 
 fig.colorbar(im, ax=ax, label="% of that true class")
 fig.tight_layout()
