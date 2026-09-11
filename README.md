@@ -144,6 +144,16 @@ the rows it needs.
 
 ## Running
 
+**Verify the published 24-class results** (no GPU, no retraining — the weights are in
+the repo):
+```bash
+.venv/bin/python scripts/data_prep.py --all-24 --per-class 20000   # ~2 min, deterministic
+cp phases/3-full-24class/models/*.keras models/
+.venv/bin/python scripts/evaluate.py --model vgg      # -> 39.5%
+.venv/bin/python scripts/evaluate.py --model resnet   # -> 48.7%
+.venv/bin/python scripts/high_snr.py                  # -> 57.9% / 75.8% at high SNR
+```
+
 10-class, on a CPU laptop (~15 min/model):
 ```bash
 .venv/bin/python scripts/data_prep.py   # ~20 seconds (pulls 80,000 examples)
@@ -161,6 +171,10 @@ Full 24-class, best done on a GPU (~25 min for both models):
 
 Add `--model resnet` to `train.py`/`evaluate.py`/`gate.py` to run the residual
 network instead. `gate.py` takes `--target-accuracy` to tune how strict it is.
+
+`train.py` refuses to start if the validation slice doesn't cover every class — a
+guard added after a class-ordering bug silently invalidated a full training run (see
+[Currently extending](#currently-extending)). If it fires, re-run `data_prep.py`.
 
 ## Architectures built
 
@@ -185,19 +199,35 @@ classes and neither model matches the paper's high-SNR numbers (details in the
 next experiment tests that diagnosis directly: **more data, same architecture,
 same everything else.**
 
-- `data_prep.py` was refactored to split-then-read instead of read-then-split,
-  roughly halving peak RAM — the change that makes preparing significantly more
-  data on a 15 GB laptop actually feasible (verified: correct stratified splits,
-  no data loss, same reproducible seed behavior).
-- **40,000/class (960k examples)** and **60,000/class (1.44M examples, ~57% of the
-  paper's own per-class density)** are already prepared, bundled, and ready to train
-  — `colab/train_24class.ipynb` now takes one variable (`PAYLOAD_NAME`) to switch
-  between data sizes, with results saved to a separate namespaced folder per run so
-  nothing overwrites a prior experiment.
-- Question being tested: does more data alone close the gap on the four collapsed
-  classes, or is it (also) an architecture/training-budget limit? Either answer is
-  useful — this project's throughline has been "diagnose the actual bottleneck,
-  don't just add compute and hope."
+**Attempt 1 (40,000/class) failed, and the failure was the interesting part.** It
+came back at **29.9%** — *worse* than the 20k run — with five classes never predicted
+once. That looked like "more data didn't help." It wasn't:
+
+- The prepared data was **sorted by class**, because an earlier optimization sorted
+  rows into file order for sequential disk reads, and the dataset is stored
+  class-by-class.
+- Keras's `validation_split` takes a **contiguous slice off the end** of the training
+  array. On class-sorted data that slice isn't a sample of the problem — it was
+  **only classes 19–23**. Those five are exactly the empty columns in the confusion
+  matrix.
+- So early stopping and best-model checkpointing were both steering by a validation
+  score computed on classes the model was barely trained on.
+
+`train_test_split` shuffles its output for precisely this reason; the sort silently
+undid that, while leaving `random_state=SEED` and `stratify=` in place so the split
+still *looked* careful. The verification written at the time checked per-class
+**counts**, which are order-blind — it could not have caught this.
+
+Fixed in two places: `data_prep.py` still reads in row order (keeping the fast
+sequential I/O) but shuffles before saving; and `train.py` now refuses to start if the
+validation slice doesn't cover every class, naming the fix. Alignment was re-verified
+against `labels.npy` ground truth rather than assumed.
+
+**Status:** the fix is in and the guard is in place; the scale-up experiment needs
+re-running from scratch, since the prepared bundles were built from the bad data and
+have been deleted. The question it tests is unchanged — does more data close the gap
+on the four collapsed classes, or is it also an architecture/budget limit? Either
+answer is useful.
 
 ## Not built (yet)
 

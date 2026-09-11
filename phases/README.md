@@ -17,6 +17,7 @@ GPU. The work ran in three phases, and each one is preserved here in full.
 N-phase-name/
   scripts/      the code EXACTLY as it was when that phase's numbers were produced
   results/      the figures that run generated
+  models/       trained weights (Phase 3 only) -- so its numbers can be re-checked
   README.md     markdown write-up
   report.html   standalone interactive report (open in a browser)
 ```
